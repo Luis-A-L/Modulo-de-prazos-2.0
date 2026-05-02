@@ -4361,7 +4361,7 @@ const UserIDWatermark = ({ overlay = false, isSidebarCollapsed = false }) => {
         return (
             <div className="fixed inset-0 pointer-events-none z-[50] overflow-hidden flex items-center justify-center select-none">
                 <span className="text-[10vw] font-black text-slate-500/[0.04] dark:text-white/[0.02] -rotate-12 uppercase whitespace-nowrap">
-                    P-SEP-AR • TJPR • {user?.id?.slice(0, 8) || 'N/A'}
+                    {user?.id?.slice(0, 8) || 'N/A'}
                 </span>
             </div>
         );
@@ -4369,7 +4369,7 @@ const UserIDWatermark = ({ overlay = false, isSidebarCollapsed = false }) => {
     
     return (
         <div className={`fixed bottom-4 text-[10px] font-bold text-slate-500 z-40 pointer-events-none transition-all duration-300 left-4 ${isSidebarCollapsed ? 'lg:left-[6rem]' : 'lg:left-[17rem]'}`}>
-            <p className="opacity-50">SISTEMA P-SEP-AR • ID: {user?.id?.slice(0, 8) || 'N/A'}</p>
+            <p className="opacity-50">ID: {user?.id?.slice(0, 8) || 'N/A'}</p>
         </div>
     );
 };
