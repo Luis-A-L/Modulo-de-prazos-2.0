@@ -1,0 +1,14 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# Minutas de referência (PDFs internos — não versionar)
+minutas/
+
+# Textos gerados por pdftotext (regeneráveis a partir dos PDFs)
+materiais/*.txt

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Gerador de Minutas - Sistema Auxiliar TJPR" />
+    <meta property="og:title" content="Gerador de Minutas" />
+    <meta property="og:description" content="Gerador de Minutas - Sistema Auxiliar" />
+    <meta property="og:type" content="website" />
+    <title>Gerador de Minutas</title>
+    <script>
+      (() => {
+        try {
+          const storedTheme = localStorage.getItem('theme-mode');
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          const theme =
+            storedTheme === 'light' || storedTheme === 'dark'
+              ? storedTheme
+              : prefersDark
+                ? 'dark'
+                : 'light';
+
+          document.documentElement.classList.toggle('dark', theme === 'dark');
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.style.colorScheme = theme;
+        } catch {}
+      })();
+    </script>
+  </head>
+  <body>
+    <a href="#conteudo-principal" class="skip-link">Pular para o conte&uacute;do principal</a>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

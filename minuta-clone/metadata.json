@@ -1,0 +1,5 @@
+{
+  "name": "Gerador de Minutas Inteligente",
+  "description": "Um aplicativo de árvore de decisão para gerar minutas de documentos personalizadas com base em suas respostas.",
+  "requestFramePermissions": []
+}
