@@ -373,13 +373,13 @@ const ConsultaAssistidaPJE = ({ numeroProcesso, setNumeroProcesso }) => {
 
     return (
         <div className="tjpr-card p-8 sm:p-10 mb-8 relative overflow-hidden group">
-            <div className="flex items-start gap-4 mb-8 border-b border-slate-200 dark:border-white/5 pb-8 relative z-10">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-600/10 flex items-center justify-center border border-indigo-600/20 shadow-inner">
-                    <span className="material-icons text-indigo-500">search</span>
+            <div className="flex items-start gap-4 mb-8 border-b tjpr-border-main pb-8 relative z-10">
+                <div className="w-12 h-12 rounded-2xl tjpr-bg-primary-glow flex items-center justify-center border tjpr-border-primary/20 shadow-inner">
+                    <span className="material-icons tjpr-text-primary">search</span>
                 </div>
                 <div className="text-left">
-                    <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-1 tracking-tight">Consulta de Processo</h2>
-                    <p className="text-slate-500 font-medium text-sm">Localize a intimação no Diário de Justiça Eletrônico Nacional.</p>
+                    <h2 className="text-2xl font-black tjpr-text-main mb-1 tracking-tight">Consulta de Processo</h2>
+                    <p className="tjpr-text-dim font-medium text-sm">Localize a intimação no Diário de Justiça Eletrônico Nacional.</p>
                 </div>
             </div>
 
@@ -1708,17 +1708,17 @@ const CalculadoraDePrazo = ({ numeroProcesso }) => {
 
                     {/* Verificação de Tempestividade (Intermediate/Admin) */}
                     {(userData?.role === 'intermediate' || userData?.role === 'admin') && (
-                        <div className="mt-12 bg-white/5 border border-white/5 rounded-3xl p-8 backdrop-blur-xl relative z-10 overflow-hidden">
+                        <div className="mt-12 tjpr-bg-alt border tjpr-border-main rounded-3xl p-8 backdrop-blur-xl relative z-10 overflow-hidden">
                             <div className="absolute bottom-0 right-0 w-64 h-64 bg-indigo-600/5 blur-[100px] rounded-full -mr-32 -mb-32 pointer-events-none"></div>
                             
                             <div className="flex items-center gap-4 mb-8">
-                                <span className="material-icons text-indigo-400">gavel</span>
-                                <h3 className="text-lg font-black text-white uppercase tracking-[0.2em]">Exame de Tempestividade</h3>
+                                <span className="material-icons tjpr-text-primary">gavel</span>
+                                <h3 className="text-lg font-black tjpr-text-main uppercase tracking-[0.2em]">Exame de Tempestividade</h3>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-end">
                                 <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Data de Interposição</label>
+                                    <label className="text-[10px] font-black tjpr-text-dim uppercase tracking-[0.2em] ml-1">Data de Interposição</label>
                                     <div className="relative">
                                         <span className="absolute left-4 top-1/2 -translate-y-1/2 material-icons text-indigo-400">event_available</span>
                                         <input 
@@ -1961,24 +1961,24 @@ const VerifyEmailPage = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-950 relative overflow-hidden">
+        <div className="min-h-screen flex items-center justify-center tjpr-bg-alt relative overflow-hidden">
             {/* Background Glows */}
             <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/10 blur-[120px] rounded-full"></div>
             <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-600/10 blur-[120px] rounded-full"></div>
             
-            <div className="w-full max-w-md p-10 space-y-8 bg-slate-900/40 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-2xl text-center relative z-10">
+            <div className="w-full max-w-md p-10 space-y-8 tjpr-bg-main backdrop-blur-2xl rounded-[2.5rem] border tjpr-border-main shadow-2xl text-center relative z-10">
                 <div className="w-20 h-20 bg-indigo-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6">
                     <span className="material-icons text-indigo-400 text-4xl">mark_email_unread</span>
                 </div>
                 
                 <div className="space-y-2">
-                    <h2 className="text-3xl font-black text-white tracking-tight">Verifique seu E-mail</h2>
-                    <p className="text-sm font-medium text-slate-400">
+                    <h2 className="text-3xl font-black tjpr-text-main tracking-tight">Verifique seu E-mail</h2>
+                    <p className="text-sm font-medium tjpr-text-dim">
                         Enviamos um link de ativação para <strong className="text-indigo-400">{user?.email}</strong>
                     </p>
                 </div>
 
-                <div className="text-xs text-slate-500 font-bold uppercase tracking-widest leading-relaxed p-4 bg-white/5 rounded-2xl border border-white/5">
+                <div className="text-xs tjpr-text-dim font-bold uppercase tracking-widest leading-relaxed p-4 tjpr-bg-alt rounded-2xl border tjpr-border-main">
                     Se não encontrar na sua caixa de entrada, verifique a pasta de <strong className="text-amber-400">Spam</strong>.
                 </div>
 
@@ -1990,13 +1990,13 @@ const VerifyEmailPage = () => {
                     <button 
                         onClick={handleResend} 
                         disabled={isResending || cooldown > 0 || initialCooldown > 0} 
-                        className="w-full py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-white transition-all disabled:opacity-30"
+                        className="w-full py-4 text-[10px] font-black uppercase tracking-[0.2em] tjpr-text-dim hover:tjpr-text-main transition-all disabled:opacity-30"
                     >
                         {isResending ? 'A ENVIAR...' : initialCooldown > 0 ? `AGUARDE ${initialCooldown}S PARA REENVIAR` : (cooldown > 0 ? `AGUARDE ${cooldown}S` : 'REENVIAR E-MAIL')}
                     </button>
                     
-                    <div className="pt-4 border-t border-white/5">
-                        <button onClick={() => window._supabaseClient.auth.signOut()} className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-rose-400 transition-colors">
+                    <div className="pt-4 border-t tjpr-border-main">
+                        <button onClick={() => window._supabaseClient.auth.signOut()} className="text-[10px] font-black uppercase tracking-widest tjpr-text-dim hover:text-rose-400 transition-colors">
                             Voltar para o Login
                         </button>
                     </div>
@@ -2460,32 +2460,32 @@ const AdminPage = ({ setCurrentArea, initialSection }) => {
 
         return (
             <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-[200] p-4 animate-in fade-in duration-300" onClick={onClose}>
-                <div className="bg-slate-900 border border-white/10 w-full max-w-md rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
-                    <div className="flex justify-between items-center p-10 border-b border-white/5">
+                <div className="tjpr-bg-main border tjpr-border-main w-full max-w-md rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
+                    <div className="flex justify-between items-center p-10 border-b tjpr-border-main">
                         <div>
-                            <h2 className="text-xl font-black text-white uppercase tracking-tight">Gerenciar Usuário</h2>
-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">{user.displayName || user.email}</p>
+                            <h2 className="text-xl font-black tjpr-text-main uppercase tracking-tight">Gerenciar Usuário</h2>
+                            <p className="text-[10px] font-bold tjpr-text-dim uppercase tracking-widest mt-1">{user.displayName || user.email}</p>
                         </div>
-                        <button onClick={onClose} className="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-white hover:bg-white/5 transition-all">
+                        <button onClick={onClose} className="w-10 h-10 rounded-full flex items-center justify-center tjpr-text-dim hover:tjpr-text-main hover:tjpr-bg-hover transition-all">
                             <span className="material-icons">close</span>
                         </button>
                     </div>
                     <div className="p-10 space-y-8">
                         <div className="space-y-3">
-                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Nível de Acesso</label>
+                            <label className="block text-[10px] font-black tjpr-text-dim uppercase tracking-[0.2em] ml-1">Nível de Acesso</label>
                             <div className="relative">
                                 <select 
                                     value={role} 
                                     onChange={e => setRole(e.target.value)} 
-                                    className="w-full h-14 pl-12 pr-4 bg-slate-950 border border-white/5 rounded-2xl focus:border-indigo-500/50 outline-none text-white appearance-none transition-all shadow-inner font-bold text-sm"
+                                    className="w-full h-14 pl-12 pr-4 tjpr-bg-alt border tjpr-border-main rounded-2xl focus:border-indigo-500/50 outline-none tjpr-text-main appearance-none transition-all shadow-inner font-bold text-sm"
                                 >
                                     <option value="basic">Básico (Visualizador)</option>
                                     <option value="intermediate">Intermediário (Editor)</option>
                                     <option value="setor_admin">Chefe de Gabinete</option>
                                     {canChangeToAdmin && <option value="admin">Administrador Global</option>}
                                 </select>
-                                <span className="material-icons absolute left-4 top-1/2 -translate-y-1/2 text-slate-600">verified_user</span>
-                                <span className="material-icons absolute right-4 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">expand_more</span>
+                                <span className="material-icons absolute left-4 top-1/2 -translate-y-1/2 tjpr-text-dim opacity-50">verified_user</span>
+                                <span className="material-icons absolute right-4 top-1/2 -translate-y-1/2 tjpr-text-dim opacity-50 pointer-events-none">expand_more</span>
                             </div>
                             {!canChangeToAdmin && role === 'admin' && (
                                 <p className="text-[10px] font-bold text-rose-500 uppercase tracking-tight ml-1 flex items-center gap-1">
@@ -2496,23 +2496,23 @@ const AdminPage = ({ setCurrentArea, initialSection }) => {
                         </div>
 
                         <div className="space-y-3">
-                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Vínculo de Setor</label>
+                            <label className="block text-[10px] font-black tjpr-text-dim uppercase tracking-[0.2em] ml-1">Vínculo de Setor</label>
                             <div className="relative">
                                 <select 
                                     value={setorId} 
                                     onChange={e => setSetorId(e.target.value)} 
-                                    className="w-full h-14 pl-12 pr-4 bg-slate-950 border border-white/5 rounded-2xl focus:border-indigo-500/50 outline-none text-white appearance-none transition-all shadow-inner font-bold text-sm"
+                                    className="w-full h-14 pl-12 pr-4 tjpr-bg-alt border tjpr-border-main rounded-2xl focus:border-indigo-500/50 outline-none tjpr-text-main appearance-none transition-all shadow-inner font-bold text-sm"
                                 >
                                     <option value="">Sem Setor Definido</option>
                                     {setores.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
                                 </select>
-                                <span className="material-icons absolute left-4 top-1/2 -translate-y-1/2 text-slate-600">business</span>
-                                <span className="material-icons absolute right-4 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">expand_more</span>
+                                <span className="material-icons absolute left-4 top-1/2 -translate-y-1/2 tjpr-text-dim opacity-50">business</span>
+                                <span className="material-icons absolute right-4 top-1/2 -translate-y-1/2 tjpr-text-dim opacity-50 pointer-events-none">expand_more</span>
                             </div>
                         </div>
                     </div>
-                    <div className="flex border-t border-white/5 bg-white/[0.02]">
-                        <button onClick={onClose} className="flex-1 px-8 py-6 text-xs font-black uppercase tracking-widest text-slate-500 hover:text-white hover:bg-white/5 transition-all">
+                    <div className="flex border-t tjpr-border-main tjpr-bg-alt">
+                        <button onClick={onClose} className="flex-1 px-8 py-6 text-xs font-black uppercase tracking-widest tjpr-text-dim hover:tjpr-text-main hover:tjpr-bg-hover transition-all">
                             Descartar
                         </button>
                         <button 
@@ -3007,9 +3007,9 @@ const AdminPage = ({ setCurrentArea, initialSection }) => {
                     </button>
                 </div>
                 <UserUsageCharts userData={selectedUserForStats.data} />
-                <div className="overflow-hidden bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] border border-white/5 shadow-2xl">
-                    <div className="px-8 py-6 border-b border-white/5 bg-white/5">
-                        <h3 className="font-black text-white uppercase tracking-widest text-xs">Histórico Recente</h3>
+                <div className="overflow-hidden tjpr-bg-main backdrop-blur-xl rounded-[2.5rem] border tjpr-border-main shadow-2xl">
+                    <div className="px-8 py-6 border-b tjpr-border-main tjpr-bg-alt">
+                        <h3 className="font-black tjpr-text-main uppercase tracking-widest text-xs">Histórico Recente</h3>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left border-separate border-spacing-y-2 px-4 pb-4">
@@ -3023,9 +3023,9 @@ const AdminPage = ({ setCurrentArea, initialSection }) => {
                             </thead>
                             <tbody className="space-y-2">
                                 {paginatedData.map(item => (
-                                    <tr key={item.id} className="bg-white/[0.02] hover:bg-white/[0.05] transition-all group">
-                                        <td className="px-6 py-4 rounded-l-2xl text-slate-400 font-medium">{item.timestamp ? formatarData(item.timestamp.toDate()) : ''}</td>
-                                        <td className="px-6 py-4 font-black text-white">{item.numeroProcesso && item.numeroProcesso !== 'Não informado' ? item.numeroProcesso : '-'}</td>
+                                    <tr key={item.id} className="tjpr-bg-alt/30 hover:tjpr-bg-hover transition-all group">
+                                        <td className="px-6 py-4 rounded-l-2xl tjpr-text-dim font-medium">{item.timestamp ? formatarData(item.timestamp.toDate()) : ''}</td>
+                                        <td className="px-6 py-4 font-black tjpr-text-main">{item.numeroProcesso && item.numeroProcesso !== 'Não informado' ? item.numeroProcesso : '-'}</td>
                                         <td className="px-6 py-4 text-center">
                                             {item.type === 'djen_consulta' ? (
                                                 <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -4359,8 +4359,8 @@ const UserIDWatermark = ({ overlay = false, isSidebarCollapsed = false }) => {
     // Watermark discreta de fundo (opcional, dependendo do design)
     if (overlay) {
         return (
-            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden flex items-center justify-center select-none">
-                <span className="text-[10vw] font-black text-white/[0.02] -rotate-12 uppercase whitespace-nowrap">
+            <div className="fixed inset-0 pointer-events-none z-[50] overflow-hidden flex items-center justify-center select-none">
+                <span className="text-[10vw] font-black text-slate-500/[0.04] dark:text-white/[0.02] -rotate-12 uppercase whitespace-nowrap">
                     P-SEP-AR • TJPR • {user?.id?.slice(0, 8) || 'N/A'}
                 </span>
             </div>
@@ -4961,6 +4961,7 @@ const App = () => {
                 />
             )}
             <CookieConsent />
+            <UserIDWatermark overlay={true} />
             <UserIDWatermark isSidebarCollapsed={isSidebarCollapsed} />
 
             {/* Sistema de Feedback Moderno (Monolith Elite) */}

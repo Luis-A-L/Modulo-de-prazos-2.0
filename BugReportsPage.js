@@ -328,60 +328,64 @@ const BugReportsPage = () => {
                 </div>
             </TJPRModal>
 
-            {/* Modal de Confirmação de Exclusão (Layout Clássico Elite) */}
-            {chamadoToDelete && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 dark:bg-slate-950/90 backdrop-blur-md p-4 animate-in fade-in duration-300" onClick={() => setChamadoToDelete(null)}>
-                    <div className="w-full max-w-md tjpr-bg-main border tjpr-border-main rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
-                        <div className="p-10 text-center">
-                            <div className="w-20 h-20 tjpr-bg-error-glow tjpr-text-error rounded-full flex items-center justify-center mx-auto mb-6 border tjpr-border-error shadow-lg shadow-[rgba(244,63,94,0.3)]">
-                                <span className="material-icons text-4xl">delete_forever</span>
-                            </div>
-                            <h3 className="text-2xl font-black tjpr-text-main mb-2 uppercase tracking-tight">Excluir Chamado?</h3>
-                            <p className="text-sm tjpr-text-dim font-medium leading-relaxed">
-                                Tem certeza que deseja excluir o chamado de <br/>
-                                <span className="tjpr-text-main font-bold">"{chamadoToDelete.reporterName}"</span>?<br/>
-                                Esta ação removerá permanentemente o registro.
-                            </p>
-                        </div>
-                        <div className="flex border-t tjpr-border-main tjpr-bg-alt">
-                            <button onClick={() => setChamadoToDelete(null)} className="flex-1 px-8 py-6 text-xs font-black uppercase tracking-widest tjpr-text-dim hover:tjpr-text-main tjpr-bg-hover transition-all border-r tjpr-border-main">
-                                Cancelar
-                            </button>
-                            <button onClick={executeDeleteChamado} className="flex-1 px-8 py-6 tjpr-bg-error hover:tjpr-bg-error/80 text-white text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-inner">
-                                <span className="material-icons text-sm">delete</span>
-                                Confirmar
-                            </button>
-                        </div>
+            {/* Modal de Confirmação de Exclusão */}
+            <TJPRModal 
+                isOpen={!!chamadoToDelete} 
+                onClose={() => setChamadoToDelete(null)}
+                title="Excluir Chamado?"
+                maxWidth="md"
+                icon="delete_forever"
+            >
+                <div className="p-10 text-center">
+                    <div className="w-20 h-20 tjpr-bg-error-glow tjpr-text-error rounded-full flex items-center justify-center mx-auto mb-6 border tjpr-border-error shadow-lg shadow-[rgba(244,63,94,0.3)]">
+                        <span className="material-icons text-4xl">delete_forever</span>
                     </div>
+                    <h3 className="text-2xl font-black tjpr-text-main mb-2 uppercase tracking-tight">Excluir Chamado?</h3>
+                    <p className="text-sm tjpr-text-dim font-medium leading-relaxed">
+                        Tem certeza que deseja excluir o chamado de <br/>
+                        <span className="tjpr-text-main font-bold">"{chamadoToDelete?.reporterName}"</span>?<br/>
+                        Esta ação removerá permanentemente o registro.
+                    </p>
                 </div>
-            )}
+                <div className="flex border-t tjpr-border-main tjpr-bg-alt">
+                    <button onClick={() => setChamadoToDelete(null)} className="flex-1 px-8 py-6 text-xs font-black uppercase tracking-widest tjpr-text-dim hover:tjpr-text-main tjpr-bg-hover transition-all border-r tjpr-border-main">
+                        Cancelar
+                    </button>
+                    <button onClick={executeDeleteChamado} className="flex-1 px-8 py-6 tjpr-bg-error hover:tjpr-bg-error/80 text-white text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-inner">
+                        <span className="material-icons text-sm">delete</span>
+                        Confirmar
+                    </button>
+                </div>
+            </TJPRModal>
 
-            {/* Modal de Confirmação de Status (Layout Clássico Elite) */}
-            {chamadoToStatus && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 dark:bg-slate-950/90 backdrop-blur-md p-4 animate-in fade-in duration-300" onClick={() => setChamadoToStatus(null)}>
-                    <div className="w-full max-w-md tjpr-bg-main border tjpr-border-main rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
-                        <div className="p-10 text-center">
-                            <div className="w-20 h-20 tjpr-bg-success-glow tjpr-text-success rounded-full flex items-center justify-center mx-auto mb-6 border tjpr-border-success shadow-lg shadow-[rgba(16,185,129,0.3)]">
-                                <span className="material-icons text-4xl">check_circle</span>
-                            </div>
-                            <h3 className="text-2xl font-black tjpr-text-main mb-2 uppercase tracking-tight">Resolver Chamado?</h3>
-                            <p className="text-sm tjpr-text-dim font-medium leading-relaxed">
-                                Deseja marcar o chamado de <br/>
-                                <span className="tjpr-text-main font-bold">"{chamadoToStatus.chamado.reporterName}"</span> como <span className="text-emerald-500 font-bold">resolvido</span>?
-                            </p>
-                        </div>
-                        <div className="flex border-t tjpr-border-main tjpr-bg-alt">
-                            <button onClick={() => setChamadoToStatus(null)} className="flex-1 px-8 py-6 text-xs font-black uppercase tracking-widest tjpr-text-dim hover:tjpr-text-main tjpr-bg-hover transition-all border-r tjpr-border-main">
-                                Voltar
-                            </button>
-                            <button onClick={executeUpdateStatus} className="flex-1 px-8 py-6 tjpr-bg-success hover:tjpr-bg-success/80 text-white text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-inner">
-                                <span className="material-icons text-sm">task_alt</span>
-                                Confirmar
-                            </button>
-                        </div>
+            {/* Modal de Confirmação de Status */}
+            <TJPRModal 
+                isOpen={!!chamadoToStatus} 
+                onClose={() => setChamadoToStatus(null)}
+                title="Resolver Chamado?"
+                maxWidth="md"
+                icon="check_circle"
+            >
+                <div className="p-10 text-center">
+                    <div className="w-20 h-20 tjpr-bg-success-glow tjpr-text-success rounded-full flex items-center justify-center mx-auto mb-6 border tjpr-border-success shadow-lg shadow-[rgba(16,185,129,0.3)]">
+                        <span className="material-icons text-4xl">check_circle</span>
                     </div>
+                    <h3 className="text-2xl font-black tjpr-text-main mb-2 uppercase tracking-tight">Resolver Chamado?</h3>
+                    <p className="text-sm tjpr-text-dim font-medium leading-relaxed">
+                        Deseja marcar o chamado de <br/>
+                        <span className="tjpr-text-main font-bold">"{chamadoToStatus?.chamado.reporterName}"</span> como <span className="text-emerald-500 font-bold">resolvido</span>?
+                    </p>
                 </div>
-            )}
+                <div className="flex border-t tjpr-border-main tjpr-bg-alt">
+                    <button onClick={() => setChamadoToStatus(null)} className="flex-1 px-8 py-6 text-xs font-black uppercase tracking-widest tjpr-text-dim hover:tjpr-text-main tjpr-bg-hover transition-all border-r tjpr-border-main">
+                        Voltar
+                    </button>
+                    <button onClick={executeUpdateStatus} className="flex-1 px-8 py-6 tjpr-bg-success hover:tjpr-bg-success/80 text-white text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-inner">
+                        <span className="material-icons text-sm">task_alt</span>
+                        Confirmar
+                    </button>
+                </div>
+            </TJPRModal>
         </div>
     );
 };

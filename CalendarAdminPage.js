@@ -363,33 +363,35 @@ const CalendarioAdminPage = () => {
                 </div>
             </TJPRModal>
             
-            {/* Modal de Confirmação de Exclusão (Layout Clássico Elite) */}
-            {entryToDelete && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 dark:bg-slate-950/90 backdrop-blur-md p-4 animate-in fade-in duration-300" onClick={() => setEntryToDelete(null)}>
-                    <div className="w-full max-w-md tjpr-bg-main border tjpr-border-main rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
-                        <div className="p-10 text-center">
-                            <div className="w-20 h-20 bg-error/10 tjpr-text-error rounded-full flex items-center justify-center mx-auto mb-6 border border-error/20" style={{boxShadow: '0 0 40px -10px var(--tjpr-error-glow)'}}>
-                                <span className="material-icons text-4xl">delete_forever</span>
-                            </div>
-                            <h3 className="text-2xl font-black tjpr-text-main mb-2 uppercase tracking-tight">Excluir Evento?</h3>
-                            <p className="text-sm tjpr-text-dim font-medium leading-relaxed">
-                                Tem certeza que deseja excluir o evento <br/>
-                                <span className="tjpr-text-main font-bold">"{entryToDelete.motivo}"</span> de <span className="tjpr-text-main font-bold">{entryToDelete.data.split('-').reverse().join('/')}</span>?<br/>
-                                Esta ação não pode ser desfeita.
-                            </p>
-                        </div>
-                        <div className="flex border-t tjpr-border-main tjpr-bg-alt">
-                            <button onClick={() => setEntryToDelete(null)} className="flex-1 px-8 py-6 text-xs font-black uppercase tracking-widest tjpr-text-dim hover:tjpr-text-main tjpr-bg-hover transition-all">
-                                Cancelar
-                            </button>
-                            <button onClick={executeDelete} className="flex-1 px-8 py-6 bg-error hover:bg-error/80 text-white text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-inner">
-                                <span className="material-icons text-sm">delete</span>
-                                Confirmar
-                            </button>
-                        </div>
+            {/* Modal de Confirmação de Exclusão */}
+            <TJPRModal 
+                isOpen={!!entryToDelete} 
+                onClose={() => setEntryToDelete(null)}
+                title="Excluir Evento?"
+                maxWidth="md"
+                icon="delete_forever"
+            >
+                <div className="p-10 text-center">
+                    <div className="w-20 h-20 tjpr-bg-error-glow tjpr-text-error rounded-full flex items-center justify-center mx-auto mb-6 border tjpr-border-error shadow-lg shadow-[rgba(244,63,94,0.3)]">
+                        <span className="material-icons text-4xl">delete_forever</span>
                     </div>
+                    <h3 className="text-2xl font-black tjpr-text-main mb-2 uppercase tracking-tight">Excluir Evento?</h3>
+                    <p className="text-sm tjpr-text-dim font-medium leading-relaxed">
+                        Tem certeza que deseja excluir o evento <br/>
+                        <span className="tjpr-text-main font-bold">"{entryToDelete?.motivo}"</span> de <span className="tjpr-text-main font-bold">{entryToDelete?.data.split('-').reverse().join('/')}</span>?<br/>
+                        Esta ação não pode ser desfeita.
+                    </p>
                 </div>
-            )}
+                <div className="flex border-t tjpr-border-main tjpr-bg-alt">
+                    <button onClick={() => setEntryToDelete(null)} className="flex-1 px-8 py-6 text-xs font-black uppercase tracking-widest tjpr-text-dim hover:tjpr-text-main tjpr-bg-hover transition-all">
+                        Cancelar
+                    </button>
+                    <button onClick={executeDelete} className="flex-1 px-8 py-6 tjpr-bg-error hover:tjpr-bg-error/80 text-white text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-inner">
+                        <span className="material-icons text-sm">delete</span>
+                        Confirmar
+                    </button>
+                </div>
+            </TJPRModal>
         </div>
     );
 }
