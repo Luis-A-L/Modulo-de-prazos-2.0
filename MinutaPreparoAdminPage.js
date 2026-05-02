@@ -189,7 +189,7 @@ const MinutaPreparoAdminPage = () => {
             <div className="tjpr-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
-                        <span className="material-icons text-purple-400 text-2xl">account_tree</span>
+                        <span className="material-symbols-rounded text-purple-400 text-2xl">account_tree</span>
                     </div>
                     <div>
                         <h3 className="font-black text-lg tjpr-text-main uppercase tracking-widest">Árvore de Decisão</h3>
@@ -203,7 +203,7 @@ const MinutaPreparoAdminPage = () => {
                         onClick={handleReset}
                         className="flex items-center gap-2 px-4 py-2 tjpr-bg-alt border tjpr-border-main rounded-xl text-[10px] font-black tjpr-text-dim uppercase tracking-widest tjpr-bg-hover transition-all"
                     >
-                        <span className="material-icons text-sm">restore</span>
+                        <span className="material-symbols-rounded text-sm">restore</span>
                         Restaurar Padrão
                     </button>
                     <button
@@ -211,7 +211,7 @@ const MinutaPreparoAdminPage = () => {
                         disabled={saving}
                         className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-indigo-600/20 active:scale-95 disabled:opacity-60"
                     >
-                        <span className={`material-icons text-sm ${saving ? 'animate-spin' : ''}`}>{saving ? 'sync' : 'save'}</span>
+                        <span className={`material-symbols-rounded text-sm ${saving ? 'animate-spin' : ''}`}>{saving ? 'sync' : 'save'}</span>
                         {saving ? 'Salvando...' : 'Salvar Fluxo'}
                     </button>
                 </div>
@@ -229,7 +229,7 @@ const MinutaPreparoAdminPage = () => {
                             className="w-7 h-7 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center hover:bg-indigo-500/20 transition-colors"
                             title="Novo passo"
                         >
-                            <span className="material-icons text-sm">add</span>
+                            <span className="material-symbols-rounded text-sm">add</span>
                         </button>
                     </div>
 
@@ -291,7 +291,7 @@ const MinutaPreparoAdminPage = () => {
                                                 onClick={e => { e.stopPropagation(); setDeleteConfirmId(stepId); }}
                                                 className="opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 rounded text-red-400/60 hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center shrink-0"
                                             >
-                                                <span className="material-icons text-sm">delete</span>
+                                                <span className="material-symbols-rounded text-sm">delete</span>
                                             </button>
                                         )}
                                     </div>
@@ -308,7 +308,7 @@ const MinutaPreparoAdminPage = () => {
                         <div className="tjpr-card p-6 space-y-4">
                             <div className="flex items-center gap-2 mb-1">
                                 <span className="text-[10px] font-black font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-1 rounded-lg">{selectedStepId}</span>
-                                <span className="material-icons text-xs tjpr-text-dim">chevron_right</span>
+                                <span className="material-symbols-rounded text-xs tjpr-text-dim">chevron_right</span>
                                 <span className="text-[10px] font-black tjpr-text-dim uppercase tracking-widest">Editando passo</span>
                             </div>
 
@@ -346,7 +346,7 @@ const MinutaPreparoAdminPage = () => {
                                     onClick={addOption}
                                     className="flex items-center gap-2 px-4 py-2 border border-dashed border-indigo-400/40 text-indigo-400 bg-indigo-500/5 hover:bg-indigo-500/10 hover:border-indigo-400/70 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
                                 >
-                                    <span className="material-icons text-sm">add</span>
+                                    <span className="material-symbols-rounded text-sm">add</span>
                                     Adicionar Opção
                                 </button>
                             </div>
@@ -354,7 +354,7 @@ const MinutaPreparoAdminPage = () => {
                             <div className="p-4 space-y-3">
                                 {selectedOpcoes.length === 0 && (
                                     <div className="text-center py-10 tjpr-bg-alt rounded-2xl border tjpr-border-main">
-                                        <span className="material-icons text-3xl tjpr-text-dim mb-2 block">list</span>
+                                        <span className="material-symbols-rounded text-3xl tjpr-text-dim mb-2 block">list</span>
                                         <p className="text-xs font-bold tjpr-text-dim">Nenhuma opção. Clique em "Adicionar Opção".</p>
                                     </div>
                                 )}
@@ -374,13 +374,13 @@ const MinutaPreparoAdminPage = () => {
                                                 </div>
                                                 <div className="flex items-center gap-1">
                                                     <button onClick={() => moveOption(idx, -1)} disabled={idx === 0} className="w-6 h-6 rounded flex items-center justify-center tjpr-text-dim hover:tjpr-text-main disabled:opacity-30 transition-colors">
-                                                        <span className="material-icons text-sm">arrow_upward</span>
+                                                        <span className="material-symbols-rounded text-sm">arrow_upward</span>
                                                     </button>
                                                     <button onClick={() => moveOption(idx, 1)} disabled={idx === selectedOpcoes.length - 1} className="w-6 h-6 rounded flex items-center justify-center tjpr-text-dim hover:tjpr-text-main disabled:opacity-30 transition-colors">
-                                                        <span className="material-icons text-sm">arrow_downward</span>
+                                                        <span className="material-symbols-rounded text-sm">arrow_downward</span>
                                                     </button>
                                                     <button onClick={() => removeOption(idx)} className="w-6 h-6 rounded flex items-center justify-center text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors ml-1">
-                                                        <span className="material-icons text-sm">close</span>
+                                                        <span className="material-symbols-rounded text-sm">close</span>
                                                     </button>
                                                 </div>
                                             </div>
@@ -413,7 +413,7 @@ const MinutaPreparoAdminPage = () => {
                                                                 <option key={id} value={id}>➡ {id}</option>
                                                             ))}
                                                         </select>
-                                                        <span className="material-icons absolute right-2 top-1/2 -translate-y-1/2 text-sm tjpr-text-dim pointer-events-none">expand_more</span>
+                                                        <span className="material-symbols-rounded absolute right-2 top-1/2 -translate-y-1/2 text-sm tjpr-text-dim pointer-events-none">expand_more</span>
                                                     </div>
                                                 </div>
 
@@ -454,7 +454,7 @@ const MinutaPreparoAdminPage = () => {
 
                         {/* Dica referências */}
                         <div className="flex items-start gap-3 p-4 bg-purple-500/5 border border-purple-500/15 rounded-2xl">
-                            <span className="material-icons text-purple-400 text-lg shrink-0 mt-0.5">info</span>
+                            <span className="material-symbols-rounded text-purple-400 text-lg shrink-0 mt-0.5">info</span>
                             <div>
                                 <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-1">Como funciona o fluxo</p>
                                 <p className="text-[10px] font-bold tjpr-text-dim leading-relaxed">
@@ -465,7 +465,7 @@ const MinutaPreparoAdminPage = () => {
                     </div>
                 ) : (
                     <div className="tjpr-card flex flex-col items-center justify-center py-20 text-center">
-                        <span className="material-icons text-4xl tjpr-text-dim mb-4">account_tree</span>
+                        <span className="material-symbols-rounded text-4xl tjpr-text-dim mb-4">account_tree</span>
                         <p className="font-black tjpr-text-main mb-1">Selecione um passo</p>
                         <p className="text-xs tjpr-text-dim">Clique em um passo na lista ao lado para editar suas perguntas e opções.</p>
                     </div>

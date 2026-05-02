@@ -186,7 +186,7 @@ const CalendarioAdminPage = () => {
                             name="data"
                             value={novaEntrada.data}
                             onChange={handleNovaEntradaChange}
-                            icon="calendar_today"
+                            icon="calendar_month"
                         />
                         <TJPRInput
                             label="Descrição / Motivo"
@@ -219,7 +219,7 @@ const CalendarioAdminPage = () => {
                                         onClick={() => handleNovaEntradaChange({ target: { name: 'tipo', value: cat.id } })}
                                         className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${novaEntrada.tipo === cat.id ? 'tjpr-bg-primary/10 tjpr-border-primary/50' : 'tjpr-bg-alt tjpr-border-main tjpr-bg-hover'}`}
                                     >
-                                        <span className={`material-icons ${novaEntrada.tipo === cat.id ? 'tjpr-text-primary' : cat.color}`}>{cat.icon}</span>
+                                        <span className={`material-symbols-rounded ${novaEntrada.tipo === cat.id ? 'tjpr-text-primary' : cat.color}`}>{cat.icon}</span>
                                         <span className={`text-xs font-black uppercase tracking-widest ${novaEntrada.tipo === cat.id ? 'tjpr-text-primary' : 'tjpr-text-dim'}`}>{cat.label}</span>
                                     </button>
                                 ))}
@@ -281,7 +281,7 @@ const CalendarioAdminPage = () => {
                                 <div className={`absolute top-0 left-0 w-1 h-full ${cat.glow}`}></div>
                                 <div className="px-8 py-6 border-b tjpr-border-main tjpr-bg-alt flex flex-col sm:flex-row justify-between items-center gap-4">
                                     <div className="flex items-center gap-4">
-                                        <span className={`material-icons ${cat.color}`}>{cat.icon}</span>
+                                        <span className={`material-symbols-rounded ${cat.color}`}>{cat.icon}</span>
                                         <h3 className="text-sm font-black tjpr-text-main uppercase tracking-[0.2em]">{cat.label}</h3>
                                     </div>
                                     <span className="px-3 py-1 rounded-full tjpr-bg-alt border tjpr-border-main text-[10px] font-black tjpr-text-dim uppercase">
@@ -307,7 +307,7 @@ const CalendarioAdminPage = () => {
                                                         <span className="text-[9px] font-black tjpr-text-dim uppercase tracking-widest">{item.isRecurring ? 'Recorrência Anual' : 'Ajuste Pontual'}</span>
                                                         {item.link && (
                                                             <a href={item.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[9px] font-black text-primary hover:tjpr-text-main transition-all uppercase tracking-widest border-b border-primary/20">
-                                                                <span className="material-icons text-[10px]">open_in_new</span>
+                                                                <span className="material-symbols-rounded text-[10px]">open_in_new</span>
                                                                 Ver Decreto
                                                             </a>
                                                         )}
@@ -316,10 +316,10 @@ const CalendarioAdminPage = () => {
                                             </div>
                                             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
                                                 <button onClick={() => setEditando(item)} className="w-10 h-10 rounded-xl tjpr-bg-alt tjpr-text-dim tjpr-bg-hover hover:tjpr-text-main transition-all flex items-center justify-center">
-                                                    <span className="material-icons text-lg">edit</span>
+                                                    <span className="material-symbols-rounded text-lg">edit</span>
                                                 </button>
                                                 <button onClick={() => setEntryToDelete(item)} className="w-10 h-10 rounded-xl bg-error/10 text-error hover:bg-error hover:text-white transition-all flex items-center justify-center">
-                                                    <span className="material-icons text-lg">delete_outline</span>
+                                                    <span className="material-symbols-rounded text-lg">delete_outline</span>
                                                 </button>
                                             </div>
                                         </div>
@@ -373,7 +373,7 @@ const CalendarioAdminPage = () => {
             >
                 <div className="p-10 text-center">
                     <div className="w-20 h-20 tjpr-bg-error-glow tjpr-text-error rounded-full flex items-center justify-center mx-auto mb-6 border tjpr-border-error shadow-lg shadow-[rgba(244,63,94,0.3)]">
-                        <span className="material-icons text-4xl">delete_forever</span>
+                        <span className="material-symbols-rounded text-4xl">delete_forever</span>
                     </div>
                     <h3 className="text-2xl font-black tjpr-text-main mb-2 uppercase tracking-tight">Excluir Evento?</h3>
                     <p className="text-sm tjpr-text-dim font-medium leading-relaxed">
@@ -387,7 +387,7 @@ const CalendarioAdminPage = () => {
                         Cancelar
                     </button>
                     <button onClick={executeDelete} className="flex-1 px-8 py-6 tjpr-bg-error hover:tjpr-bg-error/80 text-white text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-inner">
-                        <span className="material-icons text-sm">delete</span>
+                        <span className="material-symbols-rounded text-sm">delete</span>
                         Confirmar
                     </button>
                 </div>

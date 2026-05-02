@@ -57,7 +57,7 @@
     --glass-bg: rgba(255, 255, 255, 0.8);
     --glass-border: rgba(0, 0, 0, 0.08);
     --glass-blur: 16px;
-    --calendar-filter: invert(0) opacity(0.5);
+    --calendar-filter: invert(0) opacity(1);
 
     /* Semantic Mappings */
     --tjpr-text-main: #0f172a;
@@ -90,7 +90,7 @@
     /* Glassmorphism Defaults */
     --glass-bg: rgba(15, 23, 42, 0.6);
     --glass-border: rgba(255, 255, 255, 0.08);
-    --calendar-filter: invert(1) opacity(0.5);
+    --calendar-filter: invert(1) opacity(1);
 
     /* Semantic Mappings */
     --tjpr-text-main: #ffffff;
@@ -288,7 +288,9 @@ body::before {
 
 .tjpr-input {
     width: 100%;
-    padding: 0.875rem 1.125rem;
+    height: 3rem; /* Fixed height for symmetry */
+    padding: 0 1.125rem;
+    padding-left: 1.125rem; /* Base padding */
     background: var(--tjpr-surface);
     border: 1px solid var(--tjpr-border);
     border-radius: var(--radius-md);
@@ -296,7 +298,14 @@ body::before {
     font-size: 0.9375rem;
     transition: all 0.2s ease;
     backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
 }
+
+.tjpr-input.pl-12 {
+    padding-left: 3rem;
+}
+
 
 input[type="date"].tjpr-input::-webkit-datetime-edit {
     color: var(--tjpr-foreground);
@@ -306,10 +315,15 @@ input[type="date"].tjpr-input::-webkit-datetime-edit-fields-wrapper {
     color: var(--tjpr-foreground);
 }
 
-input[type="date"].tjpr-input::-webkit-inner-spin-button,
+input[type="date"].tjpr-input::-webkit-inner-spin-button {
+    filter: var(--calendar-filter);
+}
+
 input[type="date"].tjpr-input::-webkit-calendar-picker-indicator {
     filter: var(--calendar-filter);
     cursor: pointer;
+    display: block !important;
+    opacity: 1 !important;
 }
 
 .tjpr-input:focus {
@@ -321,13 +335,15 @@ input[type="date"].tjpr-input::-webkit-calendar-picker-indicator {
 
 .tjpr-label {
     display: block;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--tjpr-slate-400);
-    margin-bottom: 0.625rem;
+    font-size: 0.625rem; /* 10px - consistent with admin labels */
+    font-weight: 900;
+    color: var(--tjpr-text-dim);
+    margin-bottom: 0.5rem;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.15em;
+    margin-left: 0.25rem;
 }
+
 
 .tjpr-header {
     background: var(--glass-bg);

@@ -20,7 +20,7 @@ const TJPRCard = ({ title, subtitle, children, actions, className = '', icon }) 
                     <div className="flex items-center gap-4">
                         {icon && (
                             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                                <span className="material-icons text-primary">{icon}</span>
+                                <span className="material-symbols-rounded text-primary">{icon}</span>
                             </div>
                         )}
                         <div className="flex-1">
@@ -91,11 +91,11 @@ const TJPRButton = ({
             className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${disabled ? disabledClasses : ''} ${className}`}
         >
             {icon && iconPosition === 'left' && (
-                <span className="material-icons text-[1.2em]">{icon}</span>
+                <span className="material-symbols-rounded text-[1.2em]">{icon}</span>
             )}
             <span className="relative z-10">{children}</span>
             {icon && iconPosition === 'right' && (
-                <span className="material-icons text-[1.2em]">{icon}</span>
+                <span className="material-symbols-rounded text-[1.2em]">{icon}</span>
             )}
         </button>
     );
@@ -106,6 +106,7 @@ const TJPRButton = ({
  */
 const TJPRInput = ({
     label,
+    name,
     value,
     onChange,
     type = 'text',
@@ -114,20 +115,22 @@ const TJPRInput = ({
     error = '',
     helperText = '',
     icon,
-    className = ''
+    className = '',
+    inputClassName = '',
+    ...props
 }) => {
     return (
-        <div className={`w-full ${className}`}>
+        <div className={`w-full flex flex-col ${className}`}>
             {label && (
                 <label className="tjpr-label">
                     {label}
                     {required && <span className="tjpr-text-error ml-1">*</span>}
                 </label>
             )}
-            <div className="relative group">
+            <div className="relative group flex-1">
                 {icon && (
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-colors group-focus-within:tjpr-text-primary">
-                        <span className="material-icons tjpr-text-dim">{icon}</span>
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-colors">
+                        <span className="material-symbols-rounded tjpr-text-main" style={{ opacity: 0.7 }}>{icon}</span>
                     </div>
                 )}
                 <input
@@ -135,14 +138,39 @@ const TJPRInput = ({
                     name={name}
                     value={value}
                     onChange={onChange}
+                    onPaste={(e) => {
+                        if (type === 'date') {
+                            const pastedData = e.clipboardData.getData('text');
+                            const dmyMatch = pastedData.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+                            const ymdMatch = pastedData.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+                            let isoDate = null;
+                            if (dmyMatch) {
+                                const day = dmyMatch[1].padStart(2, '0');
+                                const month = dmyMatch[2].padStart(2, '0');
+                                const year = dmyMatch[3];
+                                isoDate = `${year}-${month}-${day}`;
+                            } else if (ymdMatch) {
+                                const year = ymdMatch[1];
+                                const month = ymdMatch[2].padStart(2, '0');
+                                const day = ymdMatch[3].padStart(2, '0');
+                                isoDate = `${year}-${month}-${day}`;
+                            }
+                            if (isoDate) {
+                                e.preventDefault();
+                                if (onChange) onChange({ target: { value: isoDate, name } });
+                            }
+                        }
+                        if (props.onPaste) props.onPaste(e);
+                    }}
                     placeholder={placeholder}
                     required={required}
-                    className={`tjpr-input ${icon ? 'pl-12' : ''} ${error ? 'tjpr-border-error/50 tjpr-bg-error/5' : ''} ${className}`}
+                    className={`tjpr-input ${icon ? 'pl-12' : ''} ${error ? 'tjpr-border-error/50 tjpr-bg-error/5' : ''} ${inputClassName}`}
+                    {...props}
                 />
             </div>
             {error && (
                 <p className="mt-2 text-xs font-bold tjpr-text-error flex items-center gap-1">
-                    <span className="material-icons text-[14px]">error_outline</span>
+                    <span className="material-symbols-rounded text-[14px]">error_outline</span>
                     {error}
                 </p>
             )}
@@ -156,9 +184,80 @@ const TJPRInput = ({
 };
 
 /**
+ * TJPRSelect - Seletor Padronizado com Design Elite
+ */
+const TJPRSelect = ({
+    label,
+    name,
+    value,
+    onChange,
+    options = [],
+    required = false,
+    error = '',
+    helperText = '',
+    icon,
+    className = '',
+    selectClassName = '',
+    ...props
+}) => {
+    return (
+        <div className={`w-full flex flex-col ${className}`}>
+            {label && (
+                <label className="tjpr-label">
+                    {label}
+                    {required && <span className="tjpr-text-error ml-1">*</span>}
+                </label>
+            )}
+            <div className="relative group flex-1">
+                {icon && (
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-colors">
+                        <span className="material-symbols-rounded tjpr-text-main" style={{ opacity: 0.7 }}>{icon}</span>
+                    </div>
+                )}
+                <select
+                    name={name}
+                    value={value}
+                    onChange={onChange}
+                    required={required}
+                    className={`tjpr-input appearance-none cursor-pointer ${icon ? 'pl-12' : ''} ${error ? 'tjpr-border-error/50 tjpr-bg-error/5' : ''} ${selectClassName}`}
+                    {...props}
+                >
+                    {options.map((opt, idx) => (
+                        <option 
+                            key={idx} 
+                            value={opt.value} 
+                            disabled={opt.disabled}
+                            hidden={opt.hidden}
+                            className="bg-slate-900 text-white disabled:opacity-50"
+                        >
+                            {opt.label}
+                        </option>
+                    ))}
+                </select>
+                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                    <span className="material-symbols-rounded tjpr-text-dim group-hover:tjpr-text-main transition-colors">expand_more</span>
+                </div>
+            </div>
+            {error && (
+                <p className="mt-2 text-xs font-bold tjpr-text-error flex items-center gap-1">
+                    <span className="material-symbols-rounded text-[14px]">error_outline</span>
+                    {error}
+                </p>
+            )}
+            {helperText && !error && (
+                <p className="mt-2 text-xs font-medium tjpr-text-dim">
+                    {helperText}
+                </p>
+            )}
+        </div>
+    );
+};
+
+
+/**
  * TJPRHeader - Barra de Navegação Monolítica
  */
-const TJPRHeader = ({ user, onLogout, onToggleDarkMode, theme, onOpenProfile, currentArea, onNavigate, isAdmin, notifications, onToggleNotifications }) => {
+const TJPRHeader = ({ user, onLogout, onToggleDarkMode, theme, onOpenProfile, currentArea, onNavigate, isAdmin, notifications, onToggleNotifications, onOpenCalendario }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     return (
@@ -184,6 +283,17 @@ const TJPRHeader = ({ user, onLogout, onToggleDarkMode, theme, onOpenProfile, cu
 
                     {/* Actions Elite */}
                     <div className="flex items-center gap-4">
+                        {/* Calendar Button */}
+                        {onOpenCalendario && (
+                            <button
+                                onClick={onOpenCalendario}
+                                className="p-3 rounded-xl tjpr-bg-alt hover:opacity-80 border tjpr-border-main transition-all group"
+                                title="Calendário Oficial"
+                            >
+                                <span className="material-symbols-rounded tjpr-text-dim group-hover:tjpr-text-primary">calendar_month</span>
+                            </button>
+                        )}
+
                         {/* Notifications Toggle */}
                         {onToggleNotifications && (
                             <button
@@ -191,7 +301,7 @@ const TJPRHeader = ({ user, onLogout, onToggleDarkMode, theme, onOpenProfile, cu
                                 className="relative p-3 rounded-xl tjpr-bg-alt hover:opacity-80 border tjpr-border-main transition-all group"
                                 title="Notificações"
                             >
-                                <span className="material-icons tjpr-text-dim group-hover:tjpr-text-main">notifications</span>
+                                <span className="material-symbols-rounded tjpr-text-dim group-hover:tjpr-text-main">notifications</span>
                                 {notifications && notifications.length > 0 && (
                                     <span className="absolute top-2.5 right-2.5 w-3 h-3 tjpr-bg-error rounded-full border-[3px] tjpr-bg-main animate-pulse"></span>
                                 )}
@@ -233,7 +343,7 @@ const TJPRHeader = ({ user, onLogout, onToggleDarkMode, theme, onOpenProfile, cu
                                         }}
                                         className="w-full px-4 py-3 text-left text-sm font-bold tjpr-text-dim hover:tjpr-bg-alt hover:tjpr-text-main flex items-center gap-3 transition-colors"
                                     >
-                                        <span className="material-icons text-lg text-primary">person_outline</span>
+                                        <span className="material-symbols-rounded text-lg text-primary">person_outline</span>
                                         Meu Perfil
                                     </button>
                                     <button
@@ -242,7 +352,7 @@ const TJPRHeader = ({ user, onLogout, onToggleDarkMode, theme, onOpenProfile, cu
                                         }}
                                         className="w-full px-4 py-3 text-left text-sm font-bold tjpr-text-dim hover:tjpr-bg-alt hover:tjpr-text-main flex items-center gap-3 transition-colors"
                                     >
-                                        <span className="material-icons text-lg text-amber-400">
+                                        <span className="material-symbols-rounded text-lg text-amber-400">
                                             {theme === 'dark' ? 'light_mode' : theme === 'light' ? 'dark_mode' : 'brightness_auto'}
                                         </span>
                                         {theme === 'dark' ? 'Modo Claro' : theme === 'light' ? 'Modo Escuro' : 'Tema do Sistema'}
@@ -254,7 +364,7 @@ const TJPRHeader = ({ user, onLogout, onToggleDarkMode, theme, onOpenProfile, cu
                                         }}
                                         className="w-full px-4 py-3 text-left text-sm font-bold tjpr-text-error hover:tjpr-bg-error/10 flex items-center gap-3 transition-colors"
                                     >
-                                        <span className="material-icons text-lg">logout</span>
+                                        <span className="material-symbols-rounded text-lg">logout</span>
                                         Encerrar Sessão
                                     </button>
                                 </div>
@@ -283,7 +393,7 @@ const TJPRBadge = ({ children, variant = 'default', icon }) => {
 
     return (
         <span className={`tjpr-badge ${variants[variant]}`}>
-            {icon && <span className="material-icons text-[14px] mr-1.5">{icon}</span>}
+            {icon && <span className="material-symbols-rounded text-[14px] mr-1.5">{icon}</span>}
             {children}
         </span>
     );
@@ -313,8 +423,8 @@ const TJPRModal = ({ isOpen, onClose, title, children, maxWidth = '2xl', icon })
                     <div className="px-6 py-5 border-b tjpr-border-main flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             {icon && (
-                                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                                    <span className="material-icons text-primary">{icon}</span>
+                                <div className="w-10 h-10 rounded-xl tjpr-bg-primary-glow flex items-center justify-center">
+                                    <span className="material-symbols-rounded tjpr-text-primary">{icon}</span>
                                 </div>
                             )}
                             <h3 className="text-xl font-extrabold tjpr-text-main tracking-tight">
@@ -325,7 +435,7 @@ const TJPRModal = ({ isOpen, onClose, title, children, maxWidth = '2xl', icon })
                             onClick={onClose}
                             className="w-10 h-10 rounded-xl hover:tjpr-bg-alt flex items-center justify-center tjpr-text-dim hover:tjpr-text-main transition-all"
                         >
-                            <span className="material-icons">close</span>
+                            <span className="material-symbols-rounded">close</span>
                         </button>
                     </div>
 
@@ -358,7 +468,7 @@ const NotificationsPanel = ({ notifications, onMarkAsRead, isOpen, onClose, onNo
                     {notifications.length === 0 ? (
                         <div className="p-12 text-center">
                             <div className="w-16 h-16 tjpr-bg-alt rounded-full flex items-center justify-center mx-auto mb-4">
-                                <span className="material-icons tjpr-text-dim text-3xl">notifications_off</span>
+                                <span className="material-symbols-rounded tjpr-text-dim text-3xl">notifications_off</span>
                             </div>
                             <p className="text-sm font-bold tjpr-text-dim uppercase tracking-widest">Vazio</p>
                         </div>
@@ -416,10 +526,10 @@ const TJPRToast = ({ message, type = 'info', onClose, duration = 5000 }) => {
 
     return (
          <div className={`flex items-center gap-4 px-6 py-4 rounded-2xl border backdrop-blur-xl shadow-2xl animate-in slide-in-from-right-full duration-500 mb-3 min-w-[300px] max-w-md ${colors[type]}`}>
-            <span className="material-icons">{icons[type]}</span>
+            <span className="material-symbols-rounded">{icons[type]}</span>
             <p className="text-xs font-black uppercase tracking-widest flex-1">{message}</p>
             <button onClick={onClose} className="tjpr-text-dim hover:tjpr-text-main transition-colors">
-                <span className="material-icons text-sm">close</span>
+                <span className="material-symbols-rounded text-sm">close</span>
             </button>
         </div>
     );
@@ -502,6 +612,7 @@ window.TJPRBadge = TJPRBadge;
 window.TJPRModal = TJPRModal;
 window.NotificationsPanel = NotificationsPanel;
 window.TJPRToastContainer = TJPRToastContainer;
+window.TJPRSelect = TJPRSelect;
 window.TJPRConfirmModal = TJPRConfirmModal;
 
 /**
@@ -530,7 +641,7 @@ const CookieConsent = () => {
             <div className="tjpr-bg-main backdrop-blur-xl border tjpr-border-main rounded-[2rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
                 <div className="flex items-start gap-5">
                     <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <span className="material-icons text-primary">cookie</span>
+                        <span className="material-symbols-rounded text-primary">cookie</span>
                     </div>
                     <div className="flex-1">
                         <h4 className="text-sm font-black tjpr-text-main uppercase tracking-widest mb-2">Privacidade & Cookies</h4>
@@ -569,3 +680,22 @@ window.TJPRFormGroup = ({ children, cols = 1, className = '' }) => {
     };
     return <div className={`grid ${gridCols[cols]} gap-6 ${className}`}>{children}</div>;
 };
+
+/**
+ * UserIDWatermark - Marca d'água de segurança
+ */
+const UserIDWatermark = ({ userId }) => {
+    if (!userId) return null;
+    return (
+        <div className="fixed inset-0 pointer-events-none z-[1000] overflow-hidden opacity-[0.03] select-none">
+            <div className="flex flex-wrap gap-20 p-20 transform -rotate-12 scale-110">
+                {Array.from({ length: 50 }).map((_, i) => (
+                    <span key={i} className="text-sm font-black uppercase tracking-[0.5em] whitespace-nowrap">
+                        ID: {userId}
+                    </span>
+                ))}
+            </div>
+        </div>
+    );
+};
+window.UserIDWatermark = UserIDWatermark;

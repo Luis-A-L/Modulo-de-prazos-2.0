@@ -151,7 +151,7 @@ const BugReportsPage = () => {
         return (
             <div className="p-12 text-center">
                 <div className="w-20 h-20 tjpr-bg-error-glow tjpr-text-error rounded-full flex items-center justify-center mx-auto mb-6">
-                    <span className="material-icons text-4xl">error</span>
+                    <span className="material-symbols-rounded text-4xl">error</span>
                 </div>
                 <h2 className="text-2xl font-black tjpr-text-main mb-2">Ops! Algo deu errado</h2>
                 <p className="tjpr-text-dim mb-8">{error}</p>
@@ -200,18 +200,18 @@ const BugReportsPage = () => {
                             icon="search"
                         />
                     </div>
-                    <div className="md:col-span-4 relative">
-                        <select 
+                    <div className="md:col-span-4">
+                        <TJPRSelect 
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
-                            className="w-full h-[52px] tjpr-bg-alt border tjpr-border-main rounded-2xl px-6 text-xs font-black uppercase tracking-widest tjpr-text-main appearance-none focus:border-primary/50 outline-none transition-all cursor-pointer"
-                        >
-                            <option value="todos" className="tjpr-bg-main">Todos os Status</option>
-                            <option value="aberto" className="tjpr-bg-main">Abertos</option>
-                            <option value="em_analise" className="tjpr-bg-main">Em Análise</option>
-                            <option value="resolvido" className="tjpr-bg-main">Resolvidos</option>
-                        </select>
-                        <span className="material-icons absolute right-6 top-1/2 -translate-y-1/2 tjpr-text-dim pointer-events-none text-lg">expand_more</span>
+                            icon="filter_alt"
+                            options={[
+                                { value: 'todos', label: 'Todos os Status' },
+                                { value: 'aberto', label: 'Abertos' },
+                                { value: 'em_analise', label: 'Em Análise' },
+                                { value: 'resolvido', label: 'Resolvidos' }
+                            ]}
+                        />
                     </div>
                     <div className="md:col-span-2">
                         <TJPRButton onClick={fetchChamados} variant="secondary" icon="refresh" className="w-full h-[52px]">
@@ -286,7 +286,7 @@ const BugReportsPage = () => {
                                                         className="w-10 h-10 rounded-xl tjpr-bg-primary-glow tjpr-text-primary hover:tjpr-bg-primary hover:text-white transition-all flex items-center justify-center"
                                                         title="Ver Captura de Tela"
                                                     >
-                                                        <span className="material-icons text-xl">image</span>
+                                                        <span className="material-symbols-rounded text-xl">image</span>
                                                     </button>
                                                 )}
                                                 {chamado.status !== 'resolvido' && (
@@ -295,7 +295,7 @@ const BugReportsPage = () => {
                                                         className="w-10 h-10 rounded-xl tjpr-bg-success-glow tjpr-text-success hover:tjpr-bg-success hover:text-white transition-all flex items-center justify-center"
                                                         title="Marcar como Resolvido"
                                                     >
-                                                        <span className="material-icons text-xl">check_circle</span>
+                                                        <span className="material-symbols-rounded text-xl">check_circle</span>
                                                     </button>
                                                 )}
                                                 <button 
@@ -303,7 +303,7 @@ const BugReportsPage = () => {
                                                     className="w-10 h-10 rounded-xl tjpr-bg-error-glow tjpr-text-error hover:tjpr-bg-error hover:text-white transition-all flex items-center justify-center"
                                                     title="Excluir Permanentemente"
                                                 >
-                                                    <span className="material-icons text-xl">delete_sweep</span>
+                                                    <span className="material-symbols-rounded text-xl">delete_sweep</span>
                                                 </button>
                                             </div>
                                         </td>
@@ -338,7 +338,7 @@ const BugReportsPage = () => {
             >
                 <div className="p-10 text-center">
                     <div className="w-20 h-20 tjpr-bg-error-glow tjpr-text-error rounded-full flex items-center justify-center mx-auto mb-6 border tjpr-border-error shadow-lg shadow-[rgba(244,63,94,0.3)]">
-                        <span className="material-icons text-4xl">delete_forever</span>
+                        <span className="material-symbols-rounded text-4xl">delete_forever</span>
                     </div>
                     <h3 className="text-2xl font-black tjpr-text-main mb-2 uppercase tracking-tight">Excluir Chamado?</h3>
                     <p className="text-sm tjpr-text-dim font-medium leading-relaxed">
@@ -352,7 +352,7 @@ const BugReportsPage = () => {
                         Cancelar
                     </button>
                     <button onClick={executeDeleteChamado} className="flex-1 px-8 py-6 tjpr-bg-error hover:tjpr-bg-error/80 text-white text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-inner">
-                        <span className="material-icons text-sm">delete</span>
+                        <span className="material-symbols-rounded text-sm">delete</span>
                         Confirmar
                     </button>
                 </div>
@@ -368,7 +368,7 @@ const BugReportsPage = () => {
             >
                 <div className="p-10 text-center">
                     <div className="w-20 h-20 tjpr-bg-success-glow tjpr-text-success rounded-full flex items-center justify-center mx-auto mb-6 border tjpr-border-success shadow-lg shadow-[rgba(16,185,129,0.3)]">
-                        <span className="material-icons text-4xl">check_circle</span>
+                        <span className="material-symbols-rounded text-4xl">check_circle</span>
                     </div>
                     <h3 className="text-2xl font-black tjpr-text-main mb-2 uppercase tracking-tight">Resolver Chamado?</h3>
                     <p className="text-sm tjpr-text-dim font-medium leading-relaxed">
@@ -381,7 +381,7 @@ const BugReportsPage = () => {
                         Voltar
                     </button>
                     <button onClick={executeUpdateStatus} className="flex-1 px-8 py-6 tjpr-bg-success hover:tjpr-bg-success/80 text-white text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-inner">
-                        <span className="material-icons text-sm">task_alt</span>
+                        <span className="material-symbols-rounded text-sm">task_alt</span>
                         Confirmar
                     </button>
                 </div>

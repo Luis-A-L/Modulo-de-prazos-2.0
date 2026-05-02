@@ -216,12 +216,12 @@ const TJPRLoginPage = () => {
 
                     <div className="grid grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom duration-700 delay-500">
                         <div className="p-6 rounded-3xl tjpr-bg-alt/50 border tjpr-border-main hover:tjpr-bg-alt transition-colors group">
-                            <span className="material-icons text-indigo-400 mb-4 text-3xl group-hover:scale-110 transition-transform">verified_user</span>
+                            <span className="material-symbols-rounded text-indigo-400 mb-4 text-3xl group-hover:scale-110 transition-transform">verified_user</span>
                             <h3 className="font-bold tjpr-text-main mb-1">Acesso Seguro</h3>
                             <p className="text-xs tjpr-text-dim font-medium leading-relaxed">Autenticação centralizada com monitoramento de sessões.</p>
                         </div>
                         <div className="p-6 rounded-3xl tjpr-bg-alt/50 border tjpr-border-main hover:tjpr-bg-alt transition-colors group">
-                            <span className="material-icons text-indigo-400 mb-4 text-3xl group-hover:scale-110 transition-transform">auto_graph</span>
+                            <span className="material-symbols-rounded text-indigo-400 mb-4 text-3xl group-hover:scale-110 transition-transform">auto_graph</span>
                             <h3 className="font-bold tjpr-text-main mb-1">Regras CNJ</h3>
                             <p className="text-xs tjpr-text-dim font-medium leading-relaxed">Cálculos baseados na legislação vigente e normas do CNJ.</p>
                         </div>
@@ -255,14 +255,14 @@ const TJPRLoginPage = () => {
                         <form onSubmit={handleSubmit} className="space-y-6">
                             {error && (
                                 <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-3 animate-shake">
-                                    <span className="material-icons text-rose-500">error_outline</span>
+                                    <span className="material-symbols-rounded text-rose-500">error_outline</span>
                                     <p className="text-xs font-bold text-rose-400">{error}</p>
                                 </div>
                             )}
 
                             {message && (
                                 <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-3">
-                                    <span className="material-icons text-emerald-500">check_circle_outline</span>
+                                    <span className="material-symbols-rounded text-emerald-500">check_circle_outline</span>
                                     <p className="text-xs font-bold text-emerald-400">{message}</p>
                                 </div>
                             )}
@@ -284,7 +284,7 @@ const TJPRLoginPage = () => {
                                     <label className="tjpr-label">Setor de Lotação</label>
                                     <div className="relative group">
                                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none tjpr-text-dim group-focus-within:text-indigo-400">
-                                            <span className="material-icons">business</span>
+                                            <span className="material-symbols-rounded">business</span>
                                         </div>
                                         <select
                                             value={setorIdSelecionado}
@@ -337,7 +337,7 @@ const TJPRLoginPage = () => {
                                         onClick={() => setShowPassword(!showPassword)}
                                         className="text-[10px] font-bold tjpr-text-dim hover:text-indigo-400 flex items-center gap-1 transition-colors uppercase tracking-widest"
                                     >
-                                        <span className="material-icons text-sm">{showPassword ? 'visibility_off' : 'visibility'}</span>
+                                        <span className="material-symbols-rounded text-sm">{showPassword ? 'visibility_off' : 'visibility'}</span>
                                         {showPassword ? 'Ocultar' : 'Exibir'}
                                     </button>
                                     <button

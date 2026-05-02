@@ -366,22 +366,15 @@ const MinutasAdminPage = () => {
                     <p className="tjpr-text-dim font-bold text-[10px] sm:text-[11px] uppercase tracking-[0.2em] ml-0 sm:ml-14">Personalização e automação de documentos por unidade judiciária.</p>
                 </div>
 
-                <div className="relative z-10 flex items-center gap-5 tjpr-bg-alt p-3 pl-6 sm:pl-8 rounded-[1.5rem] border tjpr-border-main shadow-inner w-full xl:w-auto">
-                    <div className="flex flex-col flex-1 sm:flex-initial">
-                        <span className="text-[9px] font-black tjpr-text-dim uppercase tracking-widest leading-none mb-1">Setor em Edição</span>
-                        <select 
-                            value={selectedSetor?.id || ''} 
-                            onChange={(e) => setSelectedSetor(setores.find(s => s.id === e.target.value))}
-                            disabled={userData?.role === 'setor_admin'}
-                            className="bg-transparent border-none focus:ring-0 text-sm font-black tjpr-text-main uppercase tracking-widest cursor-pointer appearance-none p-0 pr-8 w-full"
-                        >
-                            {setores.map(s => (
-                                <option key={s.id} value={s.id} className="tjpr-bg-main tjpr-text-main">{s.nome}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <span className="material-icons tjpr-text-dim pointer-events-none">expand_more</span>
-                </div>
+                <TJPRSelect 
+                    label="Setor em Edição"
+                    value={selectedSetor?.id || ''} 
+                    onChange={(e) => setSelectedSetor(setores.find(s => s.id === e.target.value))}
+                    disabled={userData?.role === 'setor_admin'}
+                    options={setores.map(s => ({ value: s.id, label: s.nome }))}
+                    icon="business_center"
+                    className="w-full sm:w-80 relative z-10"
+                />
             </div>
 
             {/* Navigation Tabs */}
@@ -399,7 +392,7 @@ const MinutasAdminPage = () => {
                             : 'tjpr-bg-main tjpr-border-main tjpr-text-dim tjpr-bg-hover tjpr-text-main hover:tjpr-text-primary'
                         }`}
                     >
-                        <span className={`material-icons text-xl ${activeTipoId === tipo.id && !isEditingFlow ? 'text-white' : 'text-primary'}`}>
+                        <span className={`material-symbols-rounded text-xl ${activeTipoId === tipo.id && !isEditingFlow ? 'text-white' : 'text-primary'}`}>
                             {tipo.icon}
                         </span>
                         <span className="font-black uppercase tracking-widest text-[10px] sm:text-xs">{tipo.nome}</span>
@@ -422,7 +415,7 @@ const MinutasAdminPage = () => {
                             : 'tjpr-bg-main tjpr-border-main tjpr-text-dim tjpr-bg-hover tjpr-text-main hover:tjpr-text-secondary'
                         }`}
                     >
-                        <span className={`material-icons text-xl ${isEditingFlow ? 'text-white' : 'tjpr-text-secondary'}`}>
+                        <span className={`material-symbols-rounded text-xl ${isEditingFlow ? 'text-white' : 'tjpr-text-secondary'}`}>
                             account_tree
                         </span>
                         <span className="font-black uppercase tracking-widest text-[10px] sm:text-xs">Fluxo de Preparo</span>
@@ -436,7 +429,7 @@ const MinutasAdminPage = () => {
                     onClick={handleCreateNewMinuta}
                     className="flex items-center gap-3 px-6 py-4 rounded-[1.5rem] border border-dashed border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all duration-300"
                 >
-                    <span className="material-icons text-xl">add_circle</span>
+                    <span className="material-symbols-rounded text-xl">add_circle</span>
                     <span className="font-black uppercase tracking-widest text-[10px] sm:text-xs">Nova Minuta</span>
                 </button>
             </div>
@@ -452,7 +445,7 @@ const MinutasAdminPage = () => {
                         <div className="px-8 py-6 border-b tjpr-border-main tjpr-bg-alt flex flex-col sm:flex-row justify-between items-center gap-4">
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                                    <span className="material-icons text-primary text-2xl">{activeTipo.icon}</span>
+                                    <span className="material-symbols-rounded text-primary text-2xl">{activeTipo.icon}</span>
                                 </div>
                                 <div>
                                     <h3 className="font-black text-xl tjpr-text-main uppercase tracking-widest">{activeTipo.nome}</h3>
@@ -469,7 +462,7 @@ const MinutasAdminPage = () => {
                                         onClick={() => handleDeleteMinuta(activeTipo.id)}
                                         className="px-4 py-2 tjpr-text-error hover:opacity-80 transition-opacity flex items-center gap-2 font-black uppercase tracking-widest text-[10px]"
                                     >
-                                        <span className="material-icons text-sm">delete</span>
+                                        <span className="material-symbols-rounded text-sm">delete</span>
                                         Excluir Modelo
                                     </button>
                                 )}
@@ -487,37 +480,35 @@ const MinutasAdminPage = () => {
 
                         {/* Controles de Estilo (Fonte) */}
                         <div className="px-8 py-4 tjpr-bg-alt border-b tjpr-border-main flex flex-wrap gap-6 items-center">
-                            <div className="flex items-center gap-3">
-                                <span className="material-icons tjpr-text-dim text-sm">font_download</span>
-                                <span className="text-[10px] font-black tjpr-text-dim uppercase tracking-widest">Fonte:</span>
-                                <select 
+                                <TJPRSelect 
+                                    label="Fonte"
                                     value={minutaStyles[activeTipo.id]?.font_family || 'Arial'}
                                     onChange={(e) => handleStyleChange(activeTipo.id, 'font_family', e.target.value)}
-                                    className="tjpr-bg-main border tjpr-border-main rounded-lg text-xs font-bold tjpr-text-main px-3 py-1 focus:ring-1 focus:ring-primary"
-                                >
-                                    <option value="Arial">Arial</option>
-                                    <option value="Times New Roman">Times New Roman</option>
-                                    <option value="Verdana">Verdana</option>
-                                    <option value="Courier New">Courier New</option>
-                                    <option value="Georgia">Georgia</option>
-                                </select>
-                            </div>
+                                    options={[
+                                        { value: 'Arial', label: 'Arial' },
+                                        { value: 'Times New Roman', label: 'Times New Roman' },
+                                        { value: 'Verdana', label: 'Verdana' },
+                                        { value: 'Courier New', label: 'Courier New' },
+                                        { value: 'Georgia', label: 'Georgia' }
+                                    ]}
+                                    icon="font_download"
+                                    className="w-48"
+                                />
 
-                            <div className="flex items-center gap-3">
-                                <span className="material-icons tjpr-text-dim text-sm">format_size</span>
-                                <span className="text-[10px] font-black tjpr-text-dim uppercase tracking-widest">Tamanho:</span>
-                                <select 
+                                <TJPRSelect 
+                                    label="Tamanho"
                                     value={minutaStyles[activeTipo.id]?.font_size || '16pt'}
                                     onChange={(e) => handleStyleChange(activeTipo.id, 'font_size', e.target.value)}
-                                    className="tjpr-bg-main border tjpr-border-main rounded-lg text-xs font-bold tjpr-text-main px-3 py-1 focus:ring-1 focus:ring-primary"
-                                >
-                                    <option value="12pt">12pt</option>
-                                    <option value="14pt">14pt</option>
-                                    <option value="16pt">16pt</option>
-                                    <option value="18pt">18pt</option>
-                                    <option value="20pt">20pt</option>
-                                </select>
-                            </div>
+                                    options={[
+                                        { value: '12pt', label: '12pt' },
+                                        { value: '14pt', label: '14pt' },
+                                        { value: '16pt', label: '16pt' },
+                                        { value: '18pt', label: '18pt' },
+                                        { value: '20pt', label: '20pt' }
+                                    ]}
+                                    icon="format_size"
+                                    className="w-32"
+                                />
                             
                             <div className="ml-auto text-[9px] font-bold tjpr-text-dim uppercase tracking-[0.2em] italic">
                                 * As fontes serão aplicadas na geração do arquivo .doc
@@ -539,7 +530,7 @@ const MinutasAdminPage = () => {
                                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500/20 via-transparent to-transparent"></div>
                                 <div className="md:col-span-1 flex flex-col justify-center">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <span className="material-icons text-primary text-sm">auto_fix_high</span>
+                                        <span className="material-symbols-rounded text-primary text-sm">auto_fix_high</span>
                                         <p className="text-[10px] font-black tjpr-text-main uppercase tracking-widest">Variáveis de Texto:</p>
                                     </div>
                                     <p className="text-[9px] font-bold tjpr-text-dim uppercase tracking-tighter">Clique para copiar as tags automáticas</p>
@@ -617,7 +608,7 @@ const MinutasAdminPage = () => {
             >
                 <div className="space-y-6 text-center">
                     <div className="w-20 h-20 rounded-full bg-error/10 flex items-center justify-center mx-auto mb-2" style={{boxShadow: '0 0 40px -10px var(--tjpr-error-glow)'}}>
-                        <span className="material-icons tjpr-text-error text-4xl">delete_forever</span>
+                        <span className="material-symbols-rounded tjpr-text-error text-4xl">delete_forever</span>
                     </div>
                     
                     <div>
