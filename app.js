@@ -4670,7 +4670,7 @@ const ToastNotification = ({ notification, onClose, onNotificationClick }) => {
 };
 
 const App = () => {
-    const { user, userData, isAdmin, loading, refreshUser, currentArea, setCurrentArea } = useAuth();
+    const { user, userData, isAdmin, isSetorAdmin, loading, refreshUser, currentArea, setCurrentArea } = useAuth();
     const { settings, updateSettings } = useContext(SettingsContext);
     const [showCalendario, setShowCalendario] = useState(false);
     const [showProfile, setShowProfile] = useState(false);
