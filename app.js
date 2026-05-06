@@ -1,11 +1,14 @@
 const { useState, useEffect, useCallback, createContext, useContext, useRef, useMemo } = React;
-const { Bar, HorizontalBar, Pie } = window.ReactChartjs2;
+const { Bar, HorizontalBar, Pie } = window.ReactChartjs2 || {};
+
+// Componentes globais carregados de outros arquivos via window
 const { 
     TJPRCard, TJPRButton, TJPRInput, TJPRHeader, TJPRBadge, 
-    TJPRModal, NotificationsPanel, CookieConsent, TJPRFormGroup,
-    MinutasAdminPage, CalendarAdminPage, BugReportsPage,
-    TJPRLoginPage, MinutaPreparoPage
+    TJPRModal, NotificationsPanel, CookieConsent, TJPRFormGroup, TJPRSelect,
+    MinutasAdminPage, CalendarioAdminPage, BugReportsPage,
+    TJPRLoginPage, MinutaPreparoPage, TJPRToastContainer, TJPRConfirmModal
 } = window;
+
 const usePagination = (data, itemsPerPage) => {
     const [currentPage, setCurrentPage] = useState(1);
     const totalPages = Math.max(1, Math.ceil(data.length / itemsPerPage));
@@ -226,7 +229,8 @@ const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         if (userData) {
-            const hasCalculadora = userData.role === 'admin' || userData.role === 'setor_admin' || userData.role === 'intermediate';
+            // Todos os usuários autenticados têm acesso à calculadora por padrão
+            const hasCalculadora = true; 
             if (!hasCalculadora && currentArea === 'Calculadora') {
                 setCurrentArea('Minuta');
             }
@@ -1894,7 +1898,149 @@ const DiaNaoUtilItem = ({ dia, as = 'li' }) => {
 };
 
 
+const PasswordChangePage = () => {
+    const { user, refreshUser } = useAuth();
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [message, setMessage] = useState('');
 
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        setMessage('');
+
+        if (newPassword.length < 6) {
+            setError('A senha deve ter pelo menos 6 caracteres.');
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            setError('As senhas não coincidem.');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            // Garante que temos uma sessão ativa antes de tentar atualizar
+            const { data: { session }, error: sessionError } = await window._supabaseClient.auth.getSession();
+            
+            console.log('Verificando sessão para troca de senha:', { 
+                hasSession: !!session, 
+                userId: session?.user?.id,
+                contextUser: user?.id 
+            });
+
+            if (sessionError || !session) {
+                throw new Error('Sessão de autenticação não encontrada. Por favor, tente sair e entrar novamente.');
+            }
+
+            // 1. Atualiza a senha no Supabase Auth
+            // 2. Atualiza os metadados para remover a flag de troca obrigatória
+            const { error: updateError } = await window._supabaseClient.auth.updateUser({
+                password: newPassword,
+                data: { must_change_password: false }
+            });
+
+            if (updateError) throw updateError;
+
+            setMessage('Senha atualizada com sucesso! Redirecionando...');
+            
+            // 3. Atualiza o estado global do usuário para liberar o acesso
+            setTimeout(async () => {
+                await refreshUser();
+            }, 2000);
+
+        } catch (err) {
+            console.error('Erro ao atualizar senha obrigatória:', err);
+            setError(err.message || 'Erro ao atualizar senha. Tente novamente.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="min-h-screen flex items-center justify-center tjpr-bg-alt relative overflow-hidden">
+            {/* Background Glows */}
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/10 blur-[120px] rounded-full"></div>
+            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-600/10 blur-[120px] rounded-full"></div>
+            
+            <div className="w-full max-w-md p-10 tjpr-bg-main backdrop-blur-2xl rounded-[2.5rem] border tjpr-border-main shadow-2xl relative z-10 animate-in zoom-in-95 duration-700">
+                {/* Ícone Principal com Glow */}
+                <div className="relative w-20 h-20 mx-auto mb-8">
+                    <div className="absolute inset-0 bg-amber-500/20 blur-2xl rounded-full animate-pulse"></div>
+                    <div className="relative w-full h-full bg-slate-900/50 border border-amber-500/30 rounded-3xl flex items-center justify-center backdrop-blur-xl">
+                        <span className="material-symbols-rounded text-4xl text-amber-400">lock_reset</span>
+                    </div>
+                </div>
+                
+                <div className="text-center space-y-3 mb-8">
+                    <h2 className="text-3xl font-black tjpr-text-main tracking-tight">Segurança Obrigatória</h2>
+                    <p className="text-sm font-medium tjpr-text-dim leading-relaxed">
+                        Detectamos que você está usando uma senha temporária. Para sua proteção, é necessário criar uma nova senha antes de continuar.
+                    </p>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {error && (
+                        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-3 animate-shake">
+                            <span className="material-symbols-rounded text-rose-500">error_outline</span>
+                            <p className="text-xs font-bold text-rose-400">{error}</p>
+                        </div>
+                    )}
+
+                    {message && (
+                        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-3">
+                            <span className="material-symbols-rounded text-emerald-500">check_circle_outline</span>
+                            <p className="text-xs font-bold text-emerald-400">{message}</p>
+                        </div>
+                    )}
+
+                    <TJPRInput
+                        label="Nova Senha"
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="••••••••"
+                        required
+                        icon="lock_outline"
+                    />
+
+                    <TJPRInput
+                        label="Confirmar Nova Senha"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="••••••••"
+                        required
+                        icon="lock_reset"
+                    />
+
+                    <TJPRButton
+                        type="submit"
+                        variant="primary"
+                        size="lg"
+                        disabled={loading}
+                        className="w-full h-14"
+                        icon={loading ? null : "verified"}
+                    >
+                        {loading ? 'ATUALIZANDO...' : 'DEFINIR NOVA SENHA'}
+                    </TJPRButton>
+                </form>
+
+                <div className="mt-8 pt-6 border-t border-white/5 text-center">
+                    <button
+                        onClick={async () => await window._supabaseClient.auth.signOut()}
+                        className="text-[10px] font-black text-slate-500 hover:text-white transition-colors uppercase tracking-[0.2em]"
+                    >
+                        Sair e trocar depois
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 
 const VerifyEmailPage = () => {
@@ -1962,43 +2108,69 @@ const VerifyEmailPage = () => {
             <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/10 blur-[120px] rounded-full"></div>
             <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-600/10 blur-[120px] rounded-full"></div>
             
-            <div className="w-full max-w-md p-10 space-y-8 tjpr-bg-main backdrop-blur-2xl rounded-[2.5rem] border tjpr-border-main shadow-2xl text-center relative z-10">
-                <div className="w-20 h-20 bg-indigo-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                    <span className="material-symbols-rounded text-indigo-400 text-4xl">mark_email_unread</span>
+            <div className="w-full max-w-md p-10 tjpr-bg-main backdrop-blur-2xl rounded-[2.5rem] border tjpr-border-main shadow-2xl text-center relative z-10 animate-in zoom-in-95 duration-700">
+                {/* Ícone Principal com Glow */}
+                <div className="relative w-24 h-24 mx-auto mb-8">
+                    <div className="absolute inset-0 bg-indigo-500/20 blur-2xl rounded-full animate-pulse"></div>
+                    <div className="relative w-full h-full bg-slate-900/50 border border-indigo-500/30 rounded-3xl flex items-center justify-center backdrop-blur-xl">
+                        <span className="material-symbols-rounded text-5xl text-indigo-400">mark_email_unread</span>
+                    </div>
                 </div>
                 
-                <div className="space-y-2">
-                    <h2 className="text-3xl font-black tjpr-text-main tracking-tight">Verifique seu E-mail</h2>
-                    <p className="text-sm font-medium tjpr-text-dim">
-                        Enviamos um link de ativação para <strong className="text-indigo-400">{user?.email}</strong>
+                <div className="space-y-3 mb-8">
+                    <h2 className="text-3xl font-black tjpr-text-main tracking-tight">Verificação Necessária</h2>
+                    <p className="text-sm font-medium tjpr-text-dim leading-relaxed">
+                        Enviamos um link de ativação para:<br/>
+                        <span className="inline-block mt-2 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-indigo-400 font-bold tracking-tight">
+                            {user?.email}
+                        </span>
                     </p>
                 </div>
 
-                <div className="text-xs tjpr-text-dim font-bold uppercase tracking-widest leading-relaxed p-4 tjpr-bg-alt rounded-2xl border tjpr-border-main">
-                    Se não encontrar na sua caixa de entrada, verifique a pasta de <strong className="text-amber-400">Spam</strong>.
+                {/* Caixa de Dica Organizada */}
+                <div className="p-5 rounded-2xl bg-indigo-500/5 border border-white/5 space-y-2 mb-8">
+                    <div className="flex items-center justify-center gap-2 text-indigo-400">
+                        <span className="material-symbols-rounded text-lg">info</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">Dica Importante</span>
+                    </div>
+                    <p className="text-[11px] tjpr-text-dim leading-relaxed">
+                        Se não encontrar na sua caixa de entrada em alguns instantes, por favor verifique a pasta de <strong className="text-amber-400">Spam</strong> ou Lixo Eletrônico.
+                    </p>
                 </div>
 
-                <div className="space-y-4 pt-4">
-                    <TJPRButton onClick={handleCheckVerification} className="w-full h-14 shadow-lg shadow-indigo-600/20">
-                        JÁ VERIFIQUEI, ATUALIZAR STATUS
+                <div className="space-y-4">
+                    <TJPRButton 
+                        onClick={handleCheckVerification} 
+                        className="w-full h-14 shadow-lg shadow-indigo-600/20 font-black tracking-widest text-xs"
+                    >
+                        JÁ VERIFIQUEI, ACESSAR SISTEMA
                     </TJPRButton>
                     
                     <button 
                         onClick={handleResend} 
                         disabled={isResending || cooldown > 0 || initialCooldown > 0} 
-                        className="w-full py-4 text-[10px] font-black uppercase tracking-[0.2em] tjpr-text-dim hover:tjpr-text-main transition-all disabled:opacity-30"
+                        className="w-full py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-indigo-400 transition-all disabled:opacity-30"
                     >
-                        {isResending ? 'A ENVIAR...' : initialCooldown > 0 ? `AGUARDE ${initialCooldown}S PARA REENVIAR` : (cooldown > 0 ? `AGUARDE ${cooldown}S` : 'REENVIAR E-MAIL')}
+                        {isResending ? 'ENVIANDO...' : initialCooldown > 0 ? `REENVIAR EM ${initialCooldown}s` : (cooldown > 0 ? `AGUARDE ${cooldown}s` : 'REENVIAR E-MAIL DE ATIVAÇÃO')}
                     </button>
                     
-                    <div className="pt-4 border-t tjpr-border-main">
-                        <button onClick={() => window._supabaseClient.auth.signOut()} className="text-[10px] font-black uppercase tracking-widest tjpr-text-dim hover:text-rose-400 transition-colors">
-                            Voltar para o Login
+                    <div className="pt-6 border-t border-white/5">
+                        <button 
+                            onClick={() => window._supabaseClient.auth.signOut()} 
+                            className="text-[10px] font-black uppercase tracking-widest text-slate-600 hover:text-rose-400 transition-colors"
+                        >
+                            SAIR E VOLTAR AO LOGIN
                         </button>
                     </div>
                 </div>
-                {message && <p className="text-xs font-bold text-emerald-400 uppercase tracking-widest animate-pulse">{message}</p>}
-                {error && <p className="text-xs font-bold text-rose-400 uppercase tracking-widest">{error}</p>}
+
+                {(message || error) && (
+                    <div className={`mt-6 p-3 rounded-xl border text-[11px] font-bold uppercase tracking-widest animate-in fade-in duration-300 ${
+                        error ? 'bg-rose-500/10 border-rose-500/20 text-rose-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                    }`}>
+                        {error || message}
+                    </div>
+                )}
             </div>
         </div>
     )
@@ -4217,8 +4389,7 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, toggleCollapse, deferredPromp
         { 
             id: 'Calculadora', 
             label: 'Calculadora', 
-            icon: 'calculate',
-            condition: !!(isAdmin || isSetorAdmin || userData?.role === 'intermediate')
+            icon: 'calculate'
         },
         { id: 'Minuta', label: 'Minuta de Preparo', icon: 'description' },
         { id: 'Admin', label: 'Administração', icon: 'admin_panel_settings', condition: !!(isAdmin || isSetorAdmin) },
@@ -4574,6 +4745,17 @@ const GlobalAlert = () => {
     return <div className={`bg-indigo-600 text-white text-center py-2 px-4 font-bold text-sm shadow-md relative z-30 transition-all ${animate ? 'animate-attention' : ''}`}>{msg.mensagem}</div>;
 };
 
+const PrivacyPolicyModal = ({ onClose }) => {
+    return (
+        <TJPRModal isOpen={true} onClose={onClose} title="Política de Privacidade">
+            <div className="space-y-4 p-4 text-sm tjpr-text-dim">
+                <p>Esta plataforma processa dados de acordo com a LGPD para fins estritamente institucionais.</p>
+                <p>Seus dados de acesso e utilização são registrados para fins de auditoria e segurança.</p>
+            </div>
+        </TJPRModal>
+    );
+};
+
 const PWAInstallPrompt = ({ deferredPrompt, onInstall, isIOS, onDismiss }) => {
     if (!deferredPrompt && !isIOS) return null;
 
@@ -4848,8 +5030,6 @@ const App = () => {
         }
     }, [user]);
 
-
-
     if (loading) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-500">
@@ -4870,6 +5050,12 @@ const App = () => {
     const isVerified = !!(user?.email_confirmed_at || userData?.emailVerified);
     if (!isVerified) {
         return <VerifyEmailPage />;
+    }
+
+    // INTERCEPTAÇÃO: Troca de Senha Obrigatória
+    const mustChangePassword = !!(user?.user_metadata?.must_change_password);
+    if (mustChangePassword) {
+        return <PasswordChangePage />;
     }
 
     // Se o usuário estiver logado e verificado, exibe a aplicação principal.
@@ -4921,7 +5107,7 @@ const App = () => {
 
                 <main className="flex-1 overflow-y-auto p-4 sm:p-8 lg:p-12 custom-scrollbar relative z-10">
                     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                        {currentArea === 'Calculadora' && (isAdmin || isSetorAdmin || userData?.role === 'intermediate') ? (
+                        {currentArea === 'Calculadora' ? (
                             <CalculatorApp />
                         ) : currentArea === 'Minuta' ? (
                             <MinutaPreparoPage />
@@ -4936,7 +5122,7 @@ const App = () => {
                                 <h2 className="text-2xl font-black text-white mb-2">Área Desconhecida</h2>
                                 <p className="text-slate-500 max-w-md mx-auto">A página que você está tentando acessar não existe ou você não tem permissão para visualizá-la.</p>
                                 <button 
-                                    onClick={() => setCurrentArea(isAdmin || isSetorAdmin || userData?.role === 'intermediate' ? 'Calculadora' : 'Minuta')} 
+                                    onClick={() => setCurrentArea('Calculadora')} 
                                     className="mt-8 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors"
                                 >
                                     Voltar para o Início

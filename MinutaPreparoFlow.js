@@ -1,8 +1,3 @@
-/**
- * MinutaPreparoFlow.js
- * Estrutura de dados que define a árvore de perguntas do gerador de minutas de preparo recursal.
- */
-
 const option = (texto, proximo, snippet) => ({
   texto,
   proximo,

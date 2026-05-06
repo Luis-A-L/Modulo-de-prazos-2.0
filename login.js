@@ -20,6 +20,19 @@ const TJPRLoginPage = () => {
     const [showPassword, setShowPassword] = React.useState(false);
     const [showForgotPasswordModal, setShowForgotPasswordModal] = React.useState(false);
     const [resetEmail, setResetEmail] = React.useState('');
+    
+    // Estados para a tela de confirmação de e-mail
+    const [awaitingConfirmationEmail, setAwaitingConfirmationEmail] = React.useState('');
+    const [resendCooldown, setResendCooldown] = React.useState(0);
+
+    // Efeito para o cooldown do botão de reenvio
+    React.useEffect(() => {
+        let timer;
+        if (resendCooldown > 0) {
+            timer = setTimeout(() => setResendCooldown(c => c - 1), 1000);
+        }
+        return () => clearTimeout(timer);
+    }, [resendCooldown]);
 
     // Busca os setores do Supabase quando o modo de registro é ativado
     React.useEffect(() => {
@@ -52,7 +65,15 @@ const TJPRLoginPage = () => {
         setMessage('');
         setLoading(true);
 
-        const fullEmail = username.includes('@') ? username : `${username}@tjpr.jus.br`;
+        const cleanUsername = username.trim();
+        const fullEmail = cleanUsername.includes('@') ? cleanUsername : `${cleanUsername}@tjpr.jus.br`;
+
+        // Reforço de segurança: aceitar apenas domínio institucional
+        if (!fullEmail.toLowerCase().endsWith('@tjpr.jus.br')) {
+            setError("Acesso restrito: utilize apenas o e-mail institucional @tjpr.jus.br");
+            setLoading(false);
+            return;
+        }
 
         try {
             if (isLogin) {
@@ -134,8 +155,11 @@ const TJPRLoginPage = () => {
                     if (profileError) console.error("Erro ao atualizar profile:", profileError);
                 }
 
-                setMessage("Conta criada! Verifique seu e-mail para confirmar o cadastro.");
-                setIsLogin(true);
+                // Iniciar a tela de confirmação e o cooldown de 60s
+                setAwaitingConfirmationEmail(fullEmail);
+                setResendCooldown(60);
+                setMessage('');
+                setError('');
             }
         } catch (err) {
             console.error('Erro na autenticação:', err);
@@ -180,6 +204,28 @@ const TJPRLoginPage = () => {
         } catch (err) {
             console.error('Erro ao enviar e-mail:', err);
             setError(err.message || 'Erro ao enviar e-mail. Tente novamente.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResendConfirmation = async () => {
+        if (resendCooldown > 0) return;
+        setLoading(true);
+        setError('');
+        setMessage('');
+        try {
+            const { error: resendError } = await window._supabaseClient.auth.resend({
+                type: 'signup',
+                email: awaitingConfirmationEmail,
+            });
+            if (resendError) throw resendError;
+            
+            setMessage('E-mail reenviado com sucesso! Verifique também a sua caixa de Spam.');
+            setResendCooldown(60);
+        } catch (err) {
+            console.error('Erro ao reenviar confirmação:', err);
+            setError(err.message || 'Erro ao reenviar o e-mail. Tente novamente mais tarde.');
         } finally {
             setLoading(false);
         }
@@ -252,166 +298,238 @@ const TJPRLoginPage = () => {
                     </div>
 
                     <div className="tjpr-card !tjpr-bg-alt/50 !tjpr-border-main !p-8 backdrop-blur-xl shadow-2xl animate-in zoom-in-95 duration-500">
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            {error && (
-                                <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-3 animate-shake">
-                                    <span className="material-symbols-rounded text-rose-500">error_outline</span>
-                                    <p className="text-xs font-bold text-rose-400">{error}</p>
-                                </div>
-                            )}
-
-                            {message && (
-                                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-3">
-                                    <span className="material-symbols-rounded text-emerald-500">check_circle_outline</span>
-                                    <p className="text-xs font-bold text-emerald-400">{message}</p>
-                                </div>
-                            )}
-
-                            {!isLogin && (
-                                <TJPRInput
-                                    label="Seu Nome Profissional"
-                                    type="text"
-                                    value={displayName}
-                                    onChange={(e) => setDisplayName(e.target.value)}
-                                    placeholder="Ex: Dr. João Silva"
-                                    required
-                                    icon="person_outline"
-                                />
-                            )}
-
-                            {!isLogin && (
-                                <div className="space-y-2">
-                                    <label className="tjpr-label">Setor de Lotação</label>
-                                    <div className="relative group">
-                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none tjpr-text-dim group-focus-within:text-indigo-400">
-                                            <span className="material-symbols-rounded">business</span>
-                                        </div>
-                                        <select
-                                            value={setorIdSelecionado}
-                                            onChange={(e) => setSetorIdSelecionado(e.target.value)}
-                                            required
-                                            className="tjpr-input pl-12 appearance-none cursor-pointer"
-                                        >
-                                            <option value="" disabled className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Selecione seu setor...</option>
-                                            {setores.map(setor => <option key={setor.id} value={setor.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{setor.nome}</option>)}
-                                            <option value="__novo__" className="bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 font-bold">Cadastrar novo setor...</option>
-                                        </select>
+                        {awaitingConfirmationEmail ? (
+                            <div className="text-center animate-in fade-in slide-in-from-bottom duration-700">
+                                {/* Ícone Principal com Glow */}
+                                <div className="relative w-24 h-24 mx-auto mb-8">
+                                    <div className="absolute inset-0 bg-indigo-500/20 blur-2xl rounded-full animate-pulse"></div>
+                                    <div className="relative w-full h-full bg-slate-900/50 border border-indigo-500/30 rounded-3xl flex items-center justify-center backdrop-blur-xl">
+                                        <span className="material-symbols-rounded text-5xl text-indigo-400">mark_email_unread</span>
                                     </div>
-                                    {setorIdSelecionado === '__novo__' && (
-                                        <input
-                                            type="text"
-                                            placeholder="Nome do Novo Setor"
-                                            value={setorNome}
-                                            onChange={(e) => setSetorNome(e.target.value)}
-                                            required
-                                            className="tjpr-input animate-in fade-in slide-in-from-top-2 mt-2"
-                                        />
-                                    )}
                                 </div>
-                            )}
 
-                            <TJPRInput
-                                label="Usuário Corporativo"
-                                type="text"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                placeholder="usuario"
-                                helperText={isLogin ? "O sufixo @tjpr.jus.br será incluído automaticamente." : ""}
-                                required
-                                icon="alternate_email"
-                            />
+                                <h3 className="text-3xl font-black tjpr-text-main tracking-tight mb-4">Quase lá!</h3>
+                                
+                                <div className="space-y-6">
+                                    <p className="text-sm tjpr-text-dim font-medium leading-relaxed">
+                                        Um link de ativação foi enviado para o seu e-mail institucional:<br/>
+                                        <span className="inline-block mt-2 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-indigo-400 font-bold tracking-tight">
+                                            {awaitingConfirmationEmail}
+                                        </span>
+                                    </p>
 
-                            <div className="space-y-3">
-                                <TJPRInput
-                                    label="Senha de Acesso"
-                                    type={showPassword ? 'text' : 'password'}
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="••••••••"
-                                    required
-                                    icon="lock_outline"
-                                />
-                                <div className="flex justify-between items-center px-1">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="text-[10px] font-bold tjpr-text-dim hover:text-indigo-400 flex items-center gap-1 transition-colors uppercase tracking-widest"
-                                    >
-                                        <span className="material-symbols-rounded text-sm">{showPassword ? 'visibility_off' : 'visibility'}</span>
-                                        {showPassword ? 'Ocultar' : 'Exibir'}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={openForgotPasswordModal}
-                                        className="text-[10px] font-bold tjpr-text-dim hover:text-indigo-400 transition-colors uppercase tracking-widest"
-                                    >
-                                        Esqueci minha senha
-                                    </button>
+                                    {/* Caixa de Dica Organizada */}
+                                    <div className="p-4 rounded-2xl bg-indigo-500/5 border border-white/5 space-y-2">
+                                        <div className="flex items-center justify-center gap-2 text-indigo-400">
+                                            <span className="material-symbols-rounded text-lg">info</span>
+                                            <span className="text-[10px] font-black uppercase tracking-widest">Dica de Acesso</span>
+                                        </div>
+                                        <p className="text-[11px] tjpr-text-dim leading-relaxed">
+                                            Verifique a pasta de <strong>Spam</strong> ou Lixo Eletrônico caso não encontre o e-mail em instantes.
+                                        </p>
+                                    </div>
+
+                                    {/* Feedback de Status */}
+                                    {(error || message) && (
+                                        <div className={`p-3 rounded-xl border text-[11px] font-bold uppercase tracking-widest animate-in fade-in duration-300 ${
+                                            error ? 'bg-rose-500/10 border-rose-500/20 text-rose-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                                        }`}>
+                                            {error || message}
+                                        </div>
+                                    )}
+
+                                    {/* Botões de Ação */}
+                                    <div className="space-y-3 pt-6 border-t border-white/5">
+                                        <TJPRButton
+                                            type="button"
+                                            variant="primary"
+                                            onClick={handleResendConfirmation}
+                                            disabled={loading || resendCooldown > 0}
+                                            icon={loading ? null : (resendCooldown > 0 ? "timer" : "refresh")}
+                                            className="w-full h-14 shadow-lg shadow-indigo-600/20"
+                                        >
+                                            {loading ? 'PROCESSANDO...' : (resendCooldown > 0 ? `REENVIAR EM ${resendCooldown}s` : 'REENVIAR E-MAIL')}
+                                        </TJPRButton>
+                                        
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setAwaitingConfirmationEmail('');
+                                                setIsLogin(true);
+                                                setError('');
+                                                setMessage('');
+                                            }}
+                                            className="w-full py-3 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] hover:text-white transition-colors"
+                                        >
+                                            CANCELAR E VOLTAR AO LOGIN
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
+                        ) : (
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                {error && (
+                                    <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-3 animate-shake">
+                                        <span className="material-symbols-rounded text-rose-500">error_outline</span>
+                                        <p className="text-xs font-bold text-rose-400">{error}</p>
+                                    </div>
+                                )}
 
-                            {!isLogin && (
-                                <React.Fragment>
+                                {message && (
+                                    <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-3">
+                                        <span className="material-symbols-rounded text-emerald-500">check_circle_outline</span>
+                                        <p className="text-xs font-bold text-emerald-400">{message}</p>
+                                    </div>
+                                )}
+
+                                {!isLogin && (
                                     <TJPRInput
-                                        label="Confirmar Senha"
-                                        type="password"
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        label="Seu Nome Profissional"
+                                        type="text"
+                                        value={displayName}
+                                        onChange={(e) => setDisplayName(e.target.value)}
+                                        placeholder="Ex: Dr. João Silva"
+                                        required
+                                        icon="person_outline"
+                                    />
+                                )}
+
+                                {!isLogin && (
+                                    <div className="space-y-2">
+                                        <label className="tjpr-label">Setor de Lotação</label>
+                                        <div className="relative group">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none tjpr-text-dim group-focus-within:text-indigo-400">
+                                                <span className="material-symbols-rounded">business</span>
+                                            </div>
+                                            <select
+                                                value={setorIdSelecionado}
+                                                onChange={(e) => setSetorIdSelecionado(e.target.value)}
+                                                required
+                                                className="tjpr-input pl-12 appearance-none cursor-pointer"
+                                            >
+                                                <option value="" disabled className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Selecione seu setor...</option>
+                                                {setores.map(setor => <option key={setor.id} value={setor.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{setor.nome}</option>)}
+                                                <option value="__novo__" className="bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 font-bold">Cadastrar novo setor...</option>
+                                            </select>
+                                        </div>
+                                        {setorIdSelecionado === '__novo__' && (
+                                            <input
+                                                type="text"
+                                                placeholder="Nome do Novo Setor"
+                                                value={setorNome}
+                                                onChange={(e) => setSetorNome(e.target.value)}
+                                                required
+                                                className="tjpr-input animate-in fade-in slide-in-from-top-2 mt-2"
+                                            />
+                                        )}
+                                    </div>
+                                )}
+
+                                <TJPRInput
+                                    label="E-mail Institucional"
+                                    type="text"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    placeholder="usuario"
+                                    helperText="Utilize seu e-mail @tjpr.jus.br"
+                                    required
+                                    icon="alternate_email"
+                                />
+
+                                <div className="space-y-3">
+                                    <TJPRInput
+                                        label="Senha de Acesso"
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
                                         placeholder="••••••••"
                                         required
-                                        icon="lock_reset"
+                                        icon="lock_outline"
                                     />
-                                    <div className="flex items-start gap-3 p-4 rounded-2xl bg-white/5 border border-white/5">
-                                        <input
-                                            type="checkbox"
-                                            checked={acceptTerms}
-                                            onChange={(e) => setAcceptTerms(e.target.checked)}
-                                            className="mt-1 h-4 w-4 rounded border-slate-300 dark:border-white/10 bg-white dark:bg-slate-900 text-indigo-600 focus:ring-indigo-500"
-                                            id="terms"
+                                    <div className="flex justify-between items-center px-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="text-[10px] font-bold tjpr-text-dim hover:text-indigo-400 flex items-center gap-1 transition-colors uppercase tracking-widest"
+                                        >
+                                            <span className="material-symbols-rounded text-sm">{showPassword ? 'visibility_off' : 'visibility'}</span>
+                                            {showPassword ? 'Ocultar' : 'Exibir'}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={openForgotPasswordModal}
+                                            className="text-[10px] font-bold tjpr-text-dim hover:text-indigo-400 transition-colors uppercase tracking-widest"
+                                        >
+                                            Esqueci minha senha
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {!isLogin && (
+                                    <React.Fragment>
+                                        <TJPRInput
+                                            label="Confirmar Senha"
+                                            type="password"
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            placeholder="••••••••"
+                                            required
+                                            icon="lock_reset"
                                         />
-                                        <label htmlFor="terms" className="text-[10px] font-bold tjpr-text-dim leading-tight uppercase tracking-widest">
-                                            Li e aceito as <button type="button" onClick={() => setShowPrivacy(true)} className="text-indigo-600 dark:text-indigo-400 underline">normas de uso</button> e a política de proteção de dados.
-                                        </label>
-                                    </div>
-                                </React.Fragment>
-                            )}
-
-                            <TJPRButton
-                                type="submit"
-                                variant="primary"
-                                size="lg"
-                                icon={loading ? null : (isLogin ? "login" : "person_add")}
-                                disabled={loading}
-                                className="w-full !rounded-2xl h-14"
-                            >
-                                {loading ? (
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                        <span>PROCESSANDO...</span>
-                                    </div>
-                                ) : (
-                                    isLogin ? 'ENTRAR NO SISTEMA' : 'CONCLUIR CADASTRO'
+                                        <div className="flex items-start gap-3 p-4 rounded-2xl bg-white/5 border border-white/5">
+                                            <input
+                                                type="checkbox"
+                                                checked={acceptTerms}
+                                                onChange={(e) => setAcceptTerms(e.target.checked)}
+                                                className="mt-1 h-4 w-4 rounded border-slate-300 dark:border-white/10 bg-white dark:bg-slate-900 text-indigo-600 focus:ring-indigo-500"
+                                                id="terms"
+                                            />
+                                            <label htmlFor="terms" className="text-[10px] font-bold tjpr-text-dim leading-tight uppercase tracking-widest">
+                                                Li e aceito as <button type="button" onClick={() => setShowPrivacy(true)} className="text-indigo-600 dark:text-indigo-400 underline">normas de uso</button> e a política de proteção de dados.
+                                            </label>
+                                        </div>
+                                    </React.Fragment>
                                 )}
-                            </TJPRButton>
-                        </form>
 
-                        <div className="mt-8 pt-8 border-t border-white/5 text-center">
-                            <button
-                                onClick={() => {
-                                    setIsLogin(!isLogin);
-                                    setError('');
-                                    setMessage('');
-                                    closeForgotPasswordModal();
-                                }}
-                                className="text-xs font-bold text-slate-500 hover:text-indigo-400 transition-colors uppercase tracking-widest"
-                            >
-                                {isLogin ? (
-                                    <span>Não tem acesso? <span className="tjpr-text-main border-b border-indigo-500/50">Solicite aqui</span></span>
-                                ) : (
-                                    <span>Já possui cadastro? <span className="tjpr-text-main border-b border-indigo-500/50">Ir para Login</span></span>
-                                )}
-                            </button>
-                        </div>
+                                <TJPRButton
+                                    type="submit"
+                                    variant="primary"
+                                    size="lg"
+                                    icon={loading ? null : (isLogin ? "login" : "person_add")}
+                                    disabled={loading}
+                                    className="w-full !rounded-2xl h-14"
+                                >
+                                    {loading ? (
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                            <span>PROCESSANDO...</span>
+                                        </div>
+                                    ) : (
+                                        isLogin ? 'ENTRAR NO SISTEMA' : 'CONCLUIR CADASTRO'
+                                    )}
+                                </TJPRButton>
+                            </form>
+                        )}
+
+                        {!awaitingConfirmationEmail && (
+                            <div className="mt-8 pt-8 border-t border-white/5 text-center">
+                                <button
+                                    onClick={() => {
+                                        setIsLogin(!isLogin);
+                                        setError('');
+                                        setMessage('');
+                                        closeForgotPasswordModal();
+                                    }}
+                                    className="text-xs font-bold text-slate-500 hover:text-indigo-400 transition-colors uppercase tracking-widest"
+                                >
+                                    {isLogin ? (
+                                        <span>Não tem acesso? <span className="tjpr-text-main border-b border-indigo-500/50">Solicite aqui</span></span>
+                                    ) : (
+                                        <span>Já possui cadastro? <span className="tjpr-text-main border-b border-indigo-500/50">Ir para Login</span></span>
+                                    )}
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     <p className="mt-10 text-[9px] text-center text-slate-600 font-bold uppercase tracking-[0.3em]">
@@ -473,3 +591,5 @@ const TJPRLoginPage = () => {
         </div>
     );
 };
+
+window.TJPRLoginPage = TJPRLoginPage;
