@@ -3427,6 +3427,14 @@
         proactivelySyncSession();
       }
     });
+
+    global.addEventListener("message", function(event) {
+      if (event.data && event.data.type === "MINUTARIO_WEBAPP_SYNC_REQUEST") {
+        if (chrome && chrome.runtime && chrome.runtime.sendMessage) {
+          chrome.runtime.sendMessage({ type: "FORCE_SYNC" }).catch(function(){});
+        }
+      }
+    });
   }
 
   if (global.document && global.document.addEventListener) {

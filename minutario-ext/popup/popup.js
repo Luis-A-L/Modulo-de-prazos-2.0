@@ -29,12 +29,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function showDashboard() {
     if (loginSection) loginSection.style.display = "none";
-    if (dashboardSection) dashboardSection.style.display = "flex";
+    if (dashboardSection) dashboardSection.style.display = "block";
     loadRecent();
   }
 
   function showLogin() {
-    if (loginSection) loginSection.style.display = "flex";
+    if (loginSection) loginSection.style.display = "block";
     if (dashboardSection) dashboardSection.style.display = "none";
     setStatus("offline");
   }
@@ -57,7 +57,12 @@ document.addEventListener("DOMContentLoaded", function () {
       if (!pwdInput) return;
       var isPassword = pwdInput.type === "password";
       pwdInput.type = isPassword ? "text" : "password";
-      togglePasswordBtn.textContent = isPassword ? "🙈" : "👁";
+      
+      var iconSpan = togglePasswordBtn.querySelector('.material-symbols-rounded');
+      if (iconSpan) {
+        iconSpan.textContent = isPassword ? "visibility_off" : "visibility";
+      }
+      
       togglePasswordBtn.setAttribute("aria-label", isPassword ? "Ocultar senha" : "Mostrar senha");
     });
   }

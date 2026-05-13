@@ -207,7 +207,7 @@ const MinutarioPage = () => {
                 t.id === editingTemplateId ? { ...t, ...updated } : t
             ));
             if (sb && uid) {
-                sb.from('minutario_templates').upsert(toRemoteTemplate({ id: editingTemplateId, ...updated }), { onConflict: 'id' }).select().then(r => { if (r.error) console.warn('Erro Supabase:', r.error); });
+                sb.from('minutario_templates').upsert(toRemoteTemplate({ id: editingTemplateId, ...updated }), { onConflict: 'id' }).select().then(r => { if (r.error) console.warn('Erro Supabase:', r.error); else window.postMessage({ type: 'MINUTARIO_WEBAPP_SYNC_REQUEST' }, '*'); });
             }
             window.showToast?.('Modelo atualizado!', 'success');
         } else {
@@ -225,7 +225,7 @@ const MinutarioPage = () => {
             setEditingTemplateId(newTemplate.id);
             setIsCreatingNew(false);
             if (sb && uid) {
-                sb.from('minutario_templates').upsert(toRemoteTemplate(newTemplate), { onConflict: 'id' }).select().then(r => { if (r.error) console.warn('Erro Supabase:', r.error); });
+                sb.from('minutario_templates').upsert(toRemoteTemplate(newTemplate), { onConflict: 'id' }).select().then(r => { if (r.error) console.warn('Erro Supabase:', r.error); else window.postMessage({ type: 'MINUTARIO_WEBAPP_SYNC_REQUEST' }, '*'); });
             }
             window.showToast?.('Modelo criado!', 'success');
         }
@@ -244,7 +244,7 @@ const MinutarioPage = () => {
         setEditContent('');
         setShowDeleteConfirm(false);
         if (sb && uid) {
-            sb.from('minutario_templates').delete().eq('id', id).then(r => { if (r.error) console.warn('Erro Supabase:', r.error); });
+            sb.from('minutario_templates').delete().eq('id', id).then(r => { if (r.error) console.warn('Erro Supabase:', r.error); else window.postMessage({ type: 'MINUTARIO_WEBAPP_SYNC_REQUEST' }, '*'); });
         }
         window.showToast?.('Modelo excluído.', 'info');
     };
@@ -318,7 +318,7 @@ const MinutarioPage = () => {
         if (sb && uid) {
             sb.from('minutario_folders').delete().eq('id', folderId).then(r => { if (r.error) console.warn('Erro Supabase:', r.error); });
             allTemplates.filter(t => t.folderId === folderId).forEach(t => {
-                sb.from('minutario_templates').upsert(toRemoteTemplate({ ...t, folderId: null }), { onConflict: 'id' }).then(r => { if (r.error) console.warn('Erro Supabase:', r.error); });
+                sb.from('minutario_templates').upsert(toRemoteTemplate({ ...t, folderId: null }), { onConflict: 'id' }).then(r => { if (r.error) console.warn('Erro Supabase:', r.error); else window.postMessage({ type: 'MINUTARIO_WEBAPP_SYNC_REQUEST' }, '*'); });
             });
         }
         window.showToast?.(`Pasta "${folder.name}" excluída.`, 'info');
@@ -514,10 +514,10 @@ const MinutarioPage = () => {
             <p className="text-sm font-medium tjpr-text-dim max-w-md leading-relaxed">
                 Crie modelos de texto com atalhos personalizados para agilizar a produção de documentos.
             </p>
-            <div className="mt-8 flex items-center gap-3 px-5 py-3 rounded-xl bg-slate-800/50 border border-slate-700/50">
-                <span className="material-symbols-rounded text-indigo-400 text-sm">keyboard</span>
+            <div className="mt-8 flex items-center gap-3 px-5 py-3 rounded-xl tjpr-bg-alt border tjpr-border-main shadow-sm">
+                <span className="material-symbols-rounded text-primary text-sm">keyboard</span>
                 <span className="text-xs font-bold tjpr-text-dim">
-                    Digite <code className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400">/</code> + atalho + <code className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400">Espaço</code> para expandir
+                    Digite <code className="px-2 py-0.5 rounded bg-primary/10 text-primary">/</code> + atalho + <code className="px-2 py-0.5 rounded bg-primary/10 text-primary">Espaço</code> para expandir
                 </span>
             </div>
             <button

@@ -632,6 +632,11 @@ function getUserIdFromUser(user) {
 
       await sb.from("minutario_templates").upsert(payload, { onConflict: "id" });
 
+      // Salva também no IndexedDB local para sync imediato com a extensão
+      if (window.MinutarioDB) {
+        await window.MinutarioDB.saveTemplate(tpl);
+      }
+
       currentTemplateId = tpl.id;
       showToast("Template salvo com sucesso!");
       await loadTemplates();
@@ -657,6 +662,12 @@ function getUserIdFromUser(user) {
       handleNewTemplate();
       allTemplates = allTemplates.filter(function(t) { return t.id !== deletedId; });
       filterAndRender();
+
+      // Remove do IndexedDB local para sync imediato com a extensão
+      if (window.MinutarioDB) {
+        await window.MinutarioDB.deleteTemplate(deletedId);
+      }
+
       notifyTemplatesUpdated();
     } catch (err) {
       console.error(err);
@@ -687,10 +698,17 @@ function getUserIdFromUser(user) {
 
     try {
       await sb.from("minutario_folders").insert(folder);
+
+      // Salva também no IndexedDB local
+      if (window.MinutarioDB) {
+        await window.MinutarioDB.saveFolder(folder);
+      }
+
       await loadFolders();
       setActiveFolder(folder.id);
       if (els.tplFolder) els.tplFolder.value = folder.id;
       showToast("Pasta criada com sucesso!");
+      notifyTemplatesUpdated();
     } catch (err) {
       console.error(err);
       showToast("Erro ao criar pasta");
@@ -716,11 +734,19 @@ function getUserIdFromUser(user) {
       if (sb && userId) {
         await sb.from("minutario_folders").delete().eq("id", activeFolderId).eq("user_id", userId);
       }
+      var deletedFolderId = activeFolderId;
       activeFolderId = null;
+
+      // Remove do IndexedDB local
+      if (window.MinutarioDB && deletedFolderId) {
+        await window.MinutarioDB.deleteFolder(deletedFolderId);
+      }
+
       await loadFolders();
       filterAndRender();
       if (els.tplFolder) els.tplFolder.value = "";
       showToast("Pasta excluída!");
+      notifyTemplatesUpdated();
     } catch (err) {
       console.error(err);
       showToast("Erro ao excluir pasta");

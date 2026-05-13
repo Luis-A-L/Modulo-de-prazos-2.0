@@ -437,7 +437,7 @@ async function performSync() {
       return { updated: false, error: "Sync module not available" };
     }
 
-    const result = await MinutarioSync.syncTemplates(userId);
+    const result = await MinutarioSync.fullSync(userId);
 
     if (result.success) {
       const tabs = await chrome.tabs.query({});
