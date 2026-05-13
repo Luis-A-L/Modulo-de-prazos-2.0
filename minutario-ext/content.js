@@ -562,16 +562,44 @@
   }
 
   function isTextControl(node) {
-    if (!node || node.nodeType !== 1) {
-      return false;
-    }
+    if (!node) return false;
+    var tag = (node.tagName || "").toUpperCase();
+    return tag === "INPUT" || tag === "TEXTAREA";
+  }
 
-    var tagName = node.tagName;
-    if (tagName === "TEXTAREA") {
-      return true;
-    }
+  function getCharBeforeCaret(doc, context) {
+    if (!doc || !context || !context.root) return "";
+    var root = context.root;
+    
+    try {
+      if (isTextControl(root)) {
+        var start = root.selectionStart;
+        if (typeof start === "number" && start > 0) {
+          return root.value[start - 1] || "";
+        }
+        return "";
+      }
 
-    return tagName === "INPUT" && /^(text|search|url|tel|email)$/i.test(node.type || "");
+      var selection = doc.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        var range = selection.getRangeAt(0);
+        if (range.collapsed) {
+          var container = range.startContainer;
+          var offset = range.startOffset;
+          
+          if (container.nodeType === 3 && offset > 0) {
+            return container.nodeValue[offset - 1] || "";
+          }
+          
+          if (offset === 0) {
+            return "";
+          }
+        }
+      }
+    } catch (e) {
+      return "";
+    }
+    return "";
   }
 
   function isWordOnlineSurfaceElement(node) {
@@ -3065,6 +3093,11 @@
     }
 
     if (event.key === triggerChar) {
+      var charBefore = getCharBeforeCaret(eventDoc, getEventEditorContext(event, eventDoc));
+      if (charBefore \u0026\u0026 !/[\\s\\(\\[\\{\\=\\u00a0]/.test(charBefore)) {
+        return false;
+      }
+
       preventHostCompletionEvent(event);
       buffer = triggerChar;
       showWordOnlineCommandOverlay(eventDoc, buffer);
@@ -3483,6 +3516,11 @@
     }
 
     if (event.key === triggerChar) {
+      var charBefore = getCharBeforeCaret(eventDoc, eventContext);
+      if (charBefore \u0026\u0026 !/[\\s\\(\\[\\{\\=\\u00a0]/.test(charBefore)) {
+        return;
+      }
+
       logWordDecision(eventDoc, "keydown-trigger-char", {
         key: event.key,
         code: event.code || "",

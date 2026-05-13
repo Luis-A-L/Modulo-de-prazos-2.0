@@ -5,7 +5,7 @@
     templates: [],
     folders: [],
     recentIds: [],
-    mode: "recent",
+    mode: "all",
     folderId: null,
     query: "",
     selectedTemplateId: null,
@@ -115,10 +115,6 @@
 
   function setMode(mode) {
     state.mode = mode;
-    if (els.tabRecent) els.tabRecent.classList.toggle("active", mode === "recent");
-    if (els.tabAll) els.tabAll.classList.toggle("active", mode === "all");
-    if (els.tabRecent) els.tabRecent.setAttribute("aria-selected", mode === "recent" ? "true" : "false");
-    if (els.tabAll) els.tabAll.setAttribute("aria-selected", mode === "all" ? "true" : "false");
     ensureSelectedTemplate();
     render();
   }
@@ -472,17 +468,7 @@
       });
     }
 
-    if (els.tabRecent) {
-      els.tabRecent.addEventListener("click", function () {
-        setMode("recent");
-      });
-    }
 
-    if (els.tabAll) {
-      els.tabAll.addEventListener("click", function () {
-        setMode("all");
-      });
-    }
   }
 
   async function init() {

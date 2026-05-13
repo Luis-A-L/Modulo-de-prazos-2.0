@@ -153,7 +153,13 @@ const MinutarioPage = () => {
     const activeFolder = allFolders.find(f => f.id === activeFolderId);
     const editingTemplate = editingTemplateId ? allTemplates.find(t => t.id === editingTemplateId) : null;
 
-    const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+    const generateId = () => {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+            const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    };
 
     const handleSelectTemplate = (template) => {
         setEditingTemplateId(template.id);
@@ -201,13 +207,18 @@ const MinutarioPage = () => {
             return;
         }
 
+        let formattedContent = editContent;
+        if (!/<[a-z][\s\S]*>/i.test(formattedContent)) {
+            formattedContent = formattedContent.split('\n').filter(p => p.trim()).map(p => `<p>${p}</p>`).join('');
+        }
+
         if (editingTemplateId) {
-            const updated = { name: editName.trim(), shortcut, folderId: editFolderId || null, content: editContent, updatedAt: Date.now() };
+            const updated = { name: editName.trim(), shortcut, folderId: editFolderId || null, content: formattedContent, updatedAt: Date.now() };
             setAllTemplates(prev => prev.map(t =>
                 t.id === editingTemplateId ? { ...t, ...updated } : t
             ));
             if (sb && uid) {
-                sb.from('minutario_templates').upsert(toRemoteTemplate({ id: editingTemplateId, ...updated }), { onConflict: 'id' }).select().then(r => { if (r.error) console.warn('Erro Supabase:', r.error); else window.postMessage({ type: 'MINUTARIO_WEBAPP_SYNC_REQUEST' }, '*'); });
+                sb.from('minutario_templates').upsert(toRemoteTemplate({ id: editingTemplateId, ...updated }), { onConflict: 'id' }).select().then(r => { if (r.error) { console.warn('Erro Supabase:', r.error); window.showToast?.('Erro no banco: ' + r.error.message, 'error'); } else window.postMessage({ type: 'MINUTARIO_WEBAPP_SYNC_REQUEST' }, '*'); });
             }
             window.showToast?.('Modelo atualizado!', 'success');
         } else {
@@ -216,7 +227,7 @@ const MinutarioPage = () => {
                 name: editName.trim(),
                 shortcut,
                 folderId: editFolderId || null,
-                content: editContent,
+                content: formattedContent,
                 usageCount: 0,
                 createdAt: Date.now(),
                 updatedAt: Date.now()
@@ -225,7 +236,7 @@ const MinutarioPage = () => {
             setEditingTemplateId(newTemplate.id);
             setIsCreatingNew(false);
             if (sb && uid) {
-                sb.from('minutario_templates').upsert(toRemoteTemplate(newTemplate), { onConflict: 'id' }).select().then(r => { if (r.error) console.warn('Erro Supabase:', r.error); else window.postMessage({ type: 'MINUTARIO_WEBAPP_SYNC_REQUEST' }, '*'); });
+                sb.from('minutario_templates').upsert(toRemoteTemplate(newTemplate), { onConflict: 'id' }).select().then(r => { if (r.error) { console.warn('Erro Supabase:', r.error); window.showToast?.('Erro no banco: ' + r.error.message, 'error'); } else window.postMessage({ type: 'MINUTARIO_WEBAPP_SYNC_REQUEST' }, '*'); });
             }
             window.showToast?.('Modelo criado!', 'success');
         }
@@ -301,7 +312,7 @@ const MinutarioPage = () => {
         setNewFolderName('');
         setShowNewFolderInput(false);
         if (sb && uid) {
-            sb.from('minutario_folders').insert(toRemoteFolder(folder)).select().then(r => { if (r.error) console.warn('Erro Supabase:', r.error); });
+            sb.from('minutario_folders').insert(toRemoteFolder(folder)).select().then(r => { if (r.error) { console.warn('Erro Supabase:', r.error); window.showToast?.('Erro no banco (Pasta): ' + r.error.message, 'error'); } });
         }
     };
 
