@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minutário</title>
+  <link rel="stylesheet" href="./popup.css" />
+</head>
+<body>
+  <header class="popup-hero">
+    <div class="brand-mark" aria-hidden="true">M</div>
+    <div>
+      <p class="eyebrow">Biblioteca de minutas</p>
+      <h1>Minutário</h1>
+      <p class="subtitle">Minutas rápidas para Word Online</p>
+    </div>
+  </header>
+
+  <!-- Login Section -->
+  <section id="login-section" class="popup-card" style="display: none;">
+    <div class="login-header">
+      <h2>Acesso ao Minutário</h2>
+      <p>Faça login com sua conta TJPR</p>
+    </div>
+    <form id="login-form">
+      <div class="input-group">
+        <label for="login-email">E-mail ou Usuário</label>
+        <input type="text" id="login-email" placeholder="usuario ou usuario@tjpr.jus.br" required />
+      </div>
+      <div class="input-group">
+        <label for="login-password">Senha</label>
+        <div class="password-wrapper">
+          <input type="password" id="login-password" placeholder="Sua senha" required />
+          <button type="button" id="toggle-password" class="btn-toggle-password" aria-label="Mostrar senha">👁</button>
+        </div>
+      </div>
+      <label class="checkbox-row">
+        <input type="checkbox" id="save-login-check" checked />
+        <span>Salvar login</span>
+      </label>
+      <div id="login-error" class="error-message" style="display: none;"></div>
+      <button type="submit" id="login-submit" class="btn-primary">Entrar</button>
+    </form>
+  </section>
+
+  <!-- Logged-in Section -->
+  <section id="dashboard-section" class="popup-card" style="display: none;">
+    <div class="user-info">
+      <div class="user-profile">
+        <div class="user-status-wrapper">
+          <span class="status-indicator" id="status-indicator"></span>
+          <span id="user-email" class="user-email">Carregando...</span>
+        </div>
+        <button id="logout-link-btn" class="logout-link" type="button">Desconectar (Sair)</button>
+      </div>
+      <span id="sync-status" class="sync-status">Pronto</span>
+    </div>
+
+    <div class="action-buttons">
+      <div class="secondary-actions">
+        <button id="open-quick-access" class="btn-primary" type="button">Consulta Rápida</button>
+        <button id="force-sync" class="btn-secondary" type="button">Sincronizar</button>
+      </div>
+      <button id="logout-btn" class="btn-logout" type="button">Sair</button>
+    </div>
+
+    <section class="recentes" aria-labelledby="recentes-label">
+      <h2 id="recentes-label">Minutas Recentes</h2>
+      <div id="recent-list"></div>
+    </section>
+  </section>
+
+  <footer>
+    <span>v1.1.0</span>
+    <span>Desenvolvido por Elvertoni Coimbra</span>
+  </footer>
+
+  <script src="../shared/config.js"></script>
+  <script src="../lib/supabase.min.js"></script>
+  <script src="../shared/browser-compat.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

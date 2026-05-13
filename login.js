@@ -20,10 +20,17 @@ const TJPRLoginPage = () => {
     const [showPassword, setShowPassword] = React.useState(false);
     const [showForgotPasswordModal, setShowForgotPasswordModal] = React.useState(false);
     const [resetEmail, setResetEmail] = React.useState('');
+    const [rememberUser, setRememberUser] = React.useState(true);
     
     // Estados para a tela de confirmação de e-mail
     const [awaitingConfirmationEmail, setAwaitingConfirmationEmail] = React.useState('');
     const [resendCooldown, setResendCooldown] = React.useState(0);
+
+    // Carrega usuário salvo
+    React.useEffect(() => {
+        const saved = localStorage.getItem('tjpr_saved_username');
+        if (saved) setUsername(saved);
+    }, []);
 
     // Efeito para o cooldown do botão de reenvio
     React.useEffect(() => {
@@ -73,6 +80,11 @@ const TJPRLoginPage = () => {
             setError("Acesso restrito: utilize apenas o e-mail institucional @tjpr.jus.br");
             setLoading(false);
             return;
+        }
+
+        // Salva usuário se marcado
+        if (rememberUser) {
+            localStorage.setItem('tjpr_saved_username', cleanUsername);
         }
 
         try {
@@ -455,6 +467,15 @@ const TJPRLoginPage = () => {
                                             <span className="material-symbols-rounded text-sm">{showPassword ? 'visibility_off' : 'visibility'}</span>
                                             {showPassword ? 'Ocultar' : 'Exibir'}
                                         </button>
+                                        <label className="flex items-center gap-1.5 text-[10px] font-bold tjpr-text-dim cursor-pointer hover:text-indigo-400 transition-colors uppercase tracking-widest">
+                                            <input
+                                                type="checkbox"
+                                                checked={rememberUser}
+                                                onChange={(e) => setRememberUser(e.target.checked)}
+                                                className="w-3 h-3 rounded border-slate-600 text-indigo-500 focus:ring-indigo-500/50"
+                                            />
+                                            Lembrar
+                                        </label>
                                         <button
                                             type="button"
                                             onClick={openForgotPasswordModal}

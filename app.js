@@ -4392,6 +4392,7 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, toggleCollapse, deferredPromp
             icon: 'calculate'
         },
         { id: 'Minuta', label: 'Minuta de Preparo', icon: 'description' },
+        { id: 'Minutario', label: 'Minutário', icon: 'article' },
         { id: 'Admin', label: 'Administração', icon: 'admin_panel_settings', condition: !!(isAdmin || isSetorAdmin) },
     ];
 
@@ -5105,35 +5106,43 @@ const App = () => {
                     onNotificationClick={handleNotificationClick}
                 />
 
-                <main className="flex-1 overflow-y-auto p-4 sm:p-8 lg:p-12 custom-scrollbar relative z-10">
-                    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                        {currentArea === 'Calculadora' ? (
-                            <CalculatorApp />
-                        ) : currentArea === 'Minuta' ? (
-                            <MinutaPreparoPage />
-                        ) : currentArea === 'Admin' && (isAdmin || isSetorAdmin) ? (
-                            <AdminPage 
-                                setCurrentArea={setCurrentArea} 
-                                initialSection={adminInitialSection}
-                            />
-                        ) : (
-                            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-                                <span className="material-symbols-rounded text-6xl text-slate-700 mb-4">explore_off</span>
-                                <h2 className="text-2xl font-black text-white mb-2">Área Desconhecida</h2>
-                                <p className="text-slate-500 max-w-md mx-auto">A página que você está tentando acessar não existe ou você não tem permissão para visualizá-la.</p>
-                                <button 
-                                    onClick={() => setCurrentArea('Calculadora')} 
-                                    className="mt-8 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors"
-                                >
-                                    Voltar para o Início
-                                </button>
+                <main className="flex-1 overflow-hidden relative z-10">
+                    {currentArea === 'Minutario' ? (
+                        <div className="h-full overflow-y-auto custom-scrollbar">
+                            <MinutarioPage />
+                        </div>
+                    ) : (
+                        <div className="h-full overflow-y-auto p-4 sm:p-8 lg:p-12 custom-scrollbar">
+                            <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                                {currentArea === 'Calculadora' ? (
+                                    <CalculatorApp />
+                                ) : currentArea === 'Minuta' ? (
+                                    <MinutaPreparoPage />
+                                ) : currentArea === 'Admin' && (isAdmin || isSetorAdmin) ? (
+                                    <AdminPage 
+                                        setCurrentArea={setCurrentArea} 
+                                        initialSection={adminInitialSection}
+                                    />
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+                                        <span className="material-symbols-rounded text-6xl text-slate-700 mb-4">explore_off</span>
+                                        <h2 className="text-2xl font-black text-white mb-2">Área Desconhecida</h2>
+                                        <p className="text-slate-500 max-w-md mx-auto">A página que você está tentando acessar não existe ou você não tem permissão para visualizá-la.</p>
+                                        <button 
+                                            onClick={() => setCurrentArea('Calculadora')} 
+                                            className="mt-8 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors"
+                                        >
+                                            Voltar para o Início
+                                        </button>
+                                    </div>
+                                )}
+                                
+                                <footer className="mt-16 border-t border-white/5 pt-8 pb-12">
+                                    <CreditsWatermark />
+                                </footer>
                             </div>
-                        )}
-                        
-                        <footer className="mt-16 border-t border-white/5 pt-8 pb-12">
-                            <CreditsWatermark />
-                        </footer>
-                    </div>
+                        </div>
+                    )}
                 </main>
             </div>
 

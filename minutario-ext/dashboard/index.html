@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Minutário</title>
+  <!-- Tailwind removido: CDN externo viola CSP de extensão MV3. Estilos inline usados abaixo. -->
+  <!-- Google Fonts removido: CDN externo viola CSP MV3. Fonte do sistema usada como fallback. -->
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; height: 100vh; display: flex; flex-direction: column; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: #1e293b; border-bottom: 1px solid #334155; }
+    .topbar h1 { font-size: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; color: #d4af37; }
+    .topbar span { font-size: 11px; color: #64748b; }
+    .topbar-actions { display: flex; gap: 8px; }
+    .topbar-actions button { padding: 6px 14px; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: #94a3b8; font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: .05em; }
+    .topbar-actions button:hover { background: #334155; color: #e2e8f0; }
+    .topbar-actions button.primary { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+    .topbar-actions button.primary:hover { background: #6366f1; }
+    .layout { display: flex; flex: 1; overflow: hidden; }
+    .panel { overflow-y: auto; padding: 16px; }
+    .panel-folders { width: 200px; border-right: 1px solid #1e293b; background: #0f172a; }
+    .panel-list { width: 260px; border-right: 1px solid #1e293b; background: #0f172a; }
+    .panel-editor { flex: 1; background: #1e293b; }
+    .panel-title { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .15em; color: #64748b; margin-bottom: 12px; }
+    .folder-item { padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; color: #94a3b8; margin-bottom: 2px; }
+    .folder-item:hover { background: #1e293b; color: #e2e8f0; }
+    .folder-item.active { background: #4f46e5; color: #fff; }
+    .btn-folder { width: 100%; padding: 6px; border-radius: 6px; border: 1px dashed #334155; background: transparent; color: #64748b; font-size: 11px; font-weight: 700; cursor: pointer; margin-top: 8px; text-transform: uppercase; letter-spacing: .05em; }
+    .btn-folder:hover { border-color: #4f46e5; color: #4f46e5; }
+    .btn-folder-danger { border-color: #dc2626; color: #dc2626; }
+    .btn-folder-danger:hover { border-color: #ef4444; color: #ef4444; }
+    .search-input { width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-size: 13px; outline: none; margin-bottom: 12px; }
+    .search-input:focus { border-color: #4f46e5; }
+    .template-item { padding: 10px 12px; border-radius: 8px; cursor: pointer; margin-bottom: 4px; border: 1px solid transparent; }
+    .template-item:hover { background: #1e293b; border-color: #334155; }
+    .template-item .name { font-size: 13px; font-weight: 700; color: #e2e8f0; }
+    .template-item .shortcut { font-size: 11px; color: #4f46e5; font-weight: 600; margin-top: 2px; }
+    .template-item.selected { background: #4f46e510; border-color: #4f46e530; }
+    .editor-form { padding: 16px; display: flex; flex-direction: column; gap: 12px; height: 100%; }
+    .editor-form label { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; color: #64748b; }
+    .editor-form input, .editor-form select { padding: 8px 12px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 13px; outline: none; width: 100%; }
+    .editor-form input:focus, .editor-form select:focus { border-color: #4f46e5; }
+    .editor-form .shortcut-wrap { display: flex; align-items: center; gap: 4px; }
+    .editor-form .shortcut-wrap span { font-size: 16px; font-weight: 700; color: #64748b; padding-left: 8px; }
+    .editor-form textarea { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 13px; outline: none; resize: none; font-family: monospace; min-height: 200px; }
+    .editor-form textarea:focus { border-color: #4f46e5; }
+    .editor-actions { display: flex; gap: 8px; }
+    .editor-actions button { padding: 8px 20px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: .05em; border: none; }
+    .editor-actions .save { background: #4f46e5; color: #fff; }
+    .editor-actions .save:hover { background: #6366f1; }
+    .editor-actions .delete { background: #dc2626; color: #fff; }
+    .editor-actions .delete:hover { background: #ef4444; }
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #64748b; font-size: 13px; text-align: center; padding: 40px; }
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; opacity: .3; }
+    .toast { position: fixed; bottom: 20px; right: 20px; z-index: 999; }
+    .toast-item { padding: 10px 18px; border-radius: 8px; background: #1e293b; border: 1px solid #334155; color: #e2e8f0; font-size: 12px; font-weight: 600; margin-bottom: 6px; animation: slideIn .2s ease; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div><h1>Minutário</h1><span>Modelos de texto</span></div>
+    <div class="topbar-actions">
+      <button id="download-ext-btn">📥 Extensão</button>
+      <button id="refresh-btn">Atualizar</button>
+      <button id="new-btn" class="primary">+ Novo</button>
+    </div>
+  </div>
+  <div class="layout">
+    <div class="panel panel-folders">
+      <div class="panel-title">Pastas</div>
+      <div id="folder-list"></div>
+      <button id="new-folder-btn" class="btn-folder">+ Nova Pasta</button>
+      <button id="del-folder-btn" class="btn-folder btn-folder-danger" style="display:none">Excluir Pasta</button>
+    </div>
+    <div class="panel panel-list">
+      <input id="search" class="search-input" placeholder="Buscar..." autocomplete="off">
+      <div id="template-list"></div>
+    </div>
+    <div class="panel panel-editor">
+      <form id="editor-form" class="editor-form">
+        <label>Nome</label>
+        <input id="tpl-name" maxlength="120" required>
+        <label>Atalho</label>
+        <div class="shortcut-wrap"><span>/</span><input id="tpl-shortcut" maxlength="30" placeholder="ex: desp-int" required></div>
+        <label>Pasta</label>
+        <select id="tpl-folder"><option value="">Sem pasta</option></select>
+        <label>Conteúdo (HTML)</label>
+        <textarea id="tpl-content" placeholder="&lt;p&gt;Texto do modelo...&lt;/p&gt;"></textarea>
+        <div class="editor-actions">
+          <button type="submit" class="save">Salvar</button>
+          <button id="delete-btn" class="delete" style="display:none">Excluir</button>
+        </div>
+      </form>
+      <div id="empty-state" class="empty-state">
+        <div class="icon">📄</div>
+        <p>Nenhum modelo ainda.<br>Crie seu primeiro modelo clicando em "+ Novo".</p>
+      </div>
+    </div>
+  </div>
+  <div id="toast" class="toast"></div>
+    <script src="../lib/supabase.min.js"></script>
+    <script src="../shared/browser-compat.js"></script>
+    <script src="../shared/config.js"></script>
+    <script src="../shared/db.js"></script>
+    <script src="../shared/api.js"></script>
+    <script src="index-app.js"></script>
+</body>
+</html>
