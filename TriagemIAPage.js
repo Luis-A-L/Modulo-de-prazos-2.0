@@ -384,10 +384,10 @@ Se não: foi remetido ao MP? Sim/Não. Decorreu o prazo? Sim/Não.
                 { role: 'user', content: USER_PROMPT }
             ];
 
-            // Chamada à API via Edge Function do Supabase (sem timeout/CORS)
+            // Chamada via SDK oficial (resolve automaticamente CORS e Headers)
             setLogProcessamento('📡 Enviando requisição para o servidor...');
-
-            const { data: fnData, error: fnError } = await window._supabaseClient.functions.invoke('ai-proxy', {
+            
+            const { data: responseData, error: fnError } = await window._supabaseClient.functions.invoke('ai-proxy', {
                 body: {
                     model: MODELO,
                     messages: messages,
@@ -398,13 +398,10 @@ Se não: foi remetido ao MP? Sim/Não. Decorreu o prazo? Sim/Não.
 
             if (fnError) {
                 console.error('Erro Edge Function:', fnError);
-                const msg = fnError.message || '';
-                throw new Error(`Erro na API: ${msg}`);
+                throw new Error(`Erro na API: ${fnError.message || 'Falha na comunicação'}`);
             }
 
             setLogProcessamento('🤖 Processando resposta da IA...');
-
-            const responseData = fnData;
 
             if (!responseData || !responseData.choices || !responseData.choices[0]) {
                 console.error('Resposta inválida:', responseData);
