@@ -1,10 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
-const API_KEY = Deno.env.get("API_KEY") || "";
+const API_KEY = Deno.env.get("API_KEY") || "sk-oHYRgWVzeaSDgoQz0gfCn2k3j06mCaOe9BbmEL2fdQtnBfUohIT1Onal3cjgRCV4";
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, x-client-info",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
 };
 
 serve(async (req) => {
