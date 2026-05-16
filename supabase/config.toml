@@ -1,0 +1,3 @@
+[functions]
+[functions.ai-proxy]
+verify_jwt = false

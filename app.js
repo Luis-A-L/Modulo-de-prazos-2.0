@@ -6,7 +6,8 @@ const {
     TJPRCard, TJPRButton, TJPRInput, TJPRHeader, TJPRBadge, 
     TJPRModal, NotificationsPanel, CookieConsent, TJPRFormGroup, TJPRSelect,
     MinutasAdminPage, CalendarioAdminPage, BugReportsPage,
-    TJPRLoginPage, MinutaPreparoPage, TJPRToastContainer, TJPRConfirmModal
+    TJPRLoginPage, MinutaPreparoPage, TJPRToastContainer, TJPRConfirmModal,
+    TriagemIAPage
 } = window;
 
 const usePagination = (data, itemsPerPage) => {
@@ -259,7 +260,9 @@ const AuthProvider = ({ children }) => {
                         displayName: userData.display_name,
                         emailVerified: userData.email_verified,
                         avatarColor: userData.avatar_color,
-                        photoURL: userData.photo_url || null
+                        photoURL: userData.photo_url || null,
+                        acessoMinutario: userData.acesso_minutario,
+                        acessoMinutaPreparo: userData.acesso_minuta_preparo
                     });
                 }
             } catch (error) {
@@ -300,10 +303,11 @@ const AuthProvider = ({ children }) => {
     }, []);
 
     const isAdmin = userData?.role === 'admin';
-    const isSetorAdmin = userData?.role === 'setor_admin'; // Mantido para compatibilidade com regras
-    const isIntermediate = userData?.role === 'intermediate'; // Usado na UI
+    const isSetorAdmin = userData?.role === 'setor_admin';
+    const isIntermediate = userData?.role === 'intermediate';
+    const acessoMinutario = userData?.role === 'admin' || userData?.role === 'setor_admin' || userData?.acessoMinutario === true;
+    const acessoMinutaPreparo = userData?.role === 'admin' || userData?.role === 'setor_admin' || userData?.acessoMinutaPreparo === true;
 
-    // A função de atualização é exposta para que componentes filhos possam forçar a atualização do usuário.
     const refreshUser = async () => {
         if (window._supabaseClient) {
             const { data: { user: freshUser }, error } = await window._supabaseClient.auth.getUser();
@@ -322,6 +326,8 @@ const AuthProvider = ({ children }) => {
         isAdmin,
         isSetorAdmin,
         isIntermediate,
+        acessoMinutario,
+        acessoMinutaPreparo,
         loading,
         refreshUser,
         currentArea,
@@ -1587,45 +1593,45 @@ const CalculadoraDePrazo = ({ numeroProcesso }) => {
             )}
 
             {resultado && (
-                <div ref={resultRef} className="mt-12 border-t tjpr-border-main pt-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 scroll-mt-8">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                        <div className="tjpr-bg-alt border tjpr-border-main p-8 rounded-[2rem] backdrop-blur-xl relative overflow-hidden group shadow-2xl">
+                <div ref={resultRef} className="mt-8 border-t tjpr-border-main pt-8 animate-in fade-in slide-in-from-bottom-8 duration-1000 scroll-mt-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div className="tjpr-bg-alt border tjpr-border-main p-5 rounded-[2rem] backdrop-blur-xl relative overflow-hidden group shadow-2xl">
                             <div className="absolute top-0 left-0 w-2 h-full bg-slate-700"></div>
-                            <span className="text-[10px] font-black tjpr-text-dim uppercase tracking-[0.2em] block mb-3">Publicação (D1)</span>
-                            <p className="text-3xl font-black tjpr-text-main group-hover:tjpr-text-primary transition-colors">{formatarData(resultado.dataPublicacao)}</p>
+                            <span className="text-[10px] font-black tjpr-text-dim uppercase tracking-[0.2em] block mb-2">Publicação (D1)</span>
+                            <p className="text-xl font-black tjpr-text-main group-hover:tjpr-text-primary transition-colors">{formatarData(resultado.dataPublicacao)}</p>
                         </div>
-                        <div className="tjpr-bg-alt border tjpr-border-main p-8 rounded-[2rem] backdrop-blur-xl relative overflow-hidden group shadow-2xl">
+                        <div className="tjpr-bg-alt border tjpr-border-main p-5 rounded-[2rem] backdrop-blur-xl relative overflow-hidden group shadow-2xl">
                             <div className="absolute top-0 left-0 w-2 h-full tjpr-bg-primary"></div>
-                            <span className="text-[10px] font-black tjpr-text-dim uppercase tracking-[0.2em] block mb-3">Início do Prazo</span>
-                            <p className="text-3xl font-black tjpr-text-main group-hover:tjpr-text-primary transition-colors">{formatarData(resultado.inicioPrazo)}</p>
+                            <span className="text-[10px] font-black tjpr-text-dim uppercase tracking-[0.2em] block mb-2">Início do Prazo</span>
+                            <p className="text-xl font-black tjpr-text-main group-hover:tjpr-text-primary transition-colors">{formatarData(resultado.inicioPrazo)}</p>
                         </div>
-                        <div className="tjpr-bg-primary-glow border tjpr-border-primary p-8 rounded-[2rem] backdrop-blur-xl relative overflow-hidden group shadow-[0_20px_50px_-10px_rgba(79,70,229,0.3)]">
+                        <div className="tjpr-bg-primary-glow border tjpr-border-primary p-5 rounded-[2rem] backdrop-blur-xl relative overflow-hidden group shadow-[0_20px_50px_-10px_rgba(79,70,229,0.3)]">
                             <div className="absolute top-0 right-0 w-32 h-32 tjpr-bg-primary-glow blur-3xl rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-1000"></div>
-                            <span className="text-[10px] font-black tjpr-text-primary uppercase tracking-[0.2em] block mb-3">Total de Dias</span>
+                            <span className="text-[10px] font-black tjpr-text-primary uppercase tracking-[0.2em] block mb-2">Total de Dias</span>
                             <div className="flex items-baseline gap-2">
-                                <p className="text-3xl font-black tjpr-text-main">{resultado.prazo}</p>
+                                <p className="text-xl font-black tjpr-text-main">{resultado.prazo}</p>
                                 <span className="text-[10px] font-black tjpr-text-primary opacity-80 uppercase tracking-widest">{resultado.tipo === 'crime' ? 'Dias Corridos' : 'Dias Úteis'}</span>
                             </div>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* Cenário 1: Base */}
-                        <div className="tjpr-bg-alt border tjpr-border-main rounded-3xl p-8 relative group">
-                            <div className="flex items-center justify-between mb-8">
-                                <h3 className="text-sm font-black tjpr-text-dim uppercase tracking-[0.2em]">Cenário Padrão</h3>
+                        <div className="tjpr-bg-alt border tjpr-border-main rounded-3xl p-5 relative group">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-[10px] font-black tjpr-text-dim uppercase tracking-[0.2em]">Cenário Padrão</h3>
                                 <div className="px-3 py-1 rounded-full tjpr-bg-main border tjpr-border-main text-[10px] font-black tjpr-text-dim uppercase tracking-widest">Sem Decretos</div>
                             </div>
                             
-                            <div className="text-center py-6">
-                                <p className="text-[10px] font-black tjpr-text-dim uppercase tracking-widest mb-2">Data Vencimento</p>
-                                <p className="text-5xl font-black tjpr-text-main tracking-tighter drop-shadow-2xl">
+                            <div className="text-center py-4">
+                                <p className="text-[10px] font-black tjpr-text-dim uppercase tracking-widest mb-1">Data Vencimento</p>
+                                <p className="text-2xl font-black tjpr-text-main tracking-tighter drop-shadow-2xl">
                                     {formatarData(resultado.semDecreto.prazoFinalProrrogado || resultado.semDecreto.prazoFinal)}
                                 </p>
                             </div>
 
                             {resultado.semDecreto.diasNaoUteis.length > 0 && (
-                                <div className="mt-8 space-y-3">
+                                <div className="mt-4 space-y-3">
                                     <p className="text-[10px] font-black tjpr-text-dim uppercase tracking-[0.2em] border-b tjpr-border-main pb-2">Suspensões Automáticas</p>
                                     <div className="space-y-1.5 max-h-[400px] overflow-y-auto custom-scrollbar pr-2 overscroll-contain">
                                         <GroupedDiasNaoUteis dias={resultado.semDecreto.diasNaoUteis} />
@@ -1635,19 +1641,19 @@ const CalculadoraDePrazo = ({ numeroProcesso }) => {
                         </div>
 
                         {/* Cenário 2: Comprovado */}
-                        <div className={`rounded-3xl p-8 relative overflow-hidden transition-all duration-700 border ${resultado.suspensoesComprovaveis.length > 0 ? 'tjpr-bg-primary-glow border-indigo-500/30 shadow-2xl shadow-indigo-500/10' : 'tjpr-bg-alt tjpr-border-main opacity-50 grayscale hover:grayscale-0 transition-all cursor-not-allowed'}`}>
+                        <div className={`rounded-3xl p-5 relative overflow-hidden transition-all duration-700 border ${resultado.suspensoesComprovaveis.length > 0 ? 'tjpr-bg-primary-glow border-indigo-500/30 shadow-2xl shadow-indigo-500/10' : 'tjpr-bg-alt tjpr-border-main opacity-50 grayscale hover:grayscale-0 transition-all cursor-not-allowed'}`}>
                             <div className="absolute top-0 right-0 p-4">
                                 <span className="material-symbols-rounded tjpr-text-primary animate-pulse">verified</span>
                             </div>
 
-                            <div className="flex items-center justify-between mb-8">
-                                <h3 className="text-sm font-black tjpr-text-primary uppercase tracking-[0.2em]">Cenário Comprovado</h3>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-[10px] font-black tjpr-text-primary uppercase tracking-[0.2em]">Cenário Comprovado</h3>
                                 <div className="px-3 py-1 rounded-full tjpr-bg-primary-glow border tjpr-border-primary text-[10px] font-black tjpr-text-primary uppercase tracking-widest">Com Decretos</div>
                             </div>
 
-                            <div className="text-center py-6">
-                                <p className="text-[10px] font-black tjpr-text-primary opacity-60 uppercase tracking-widest mb-2">Data Vencimento (Recalculada)</p>
-                                <p className="text-5xl font-black tjpr-text-main tracking-tighter drop-shadow-2xl">
+                            <div className="text-center py-4">
+                                <p className="text-[10px] font-black tjpr-text-primary opacity-60 uppercase tracking-widest mb-1">Data Vencimento (Recalculada)</p>
+                                <p className="text-2xl font-black tjpr-text-main tracking-tighter drop-shadow-2xl">
                                     {formatarData(resultado.comDecreto.prazoFinalProrrogado || resultado.comDecreto.prazoFinal)}
                                 </p>
                             </div>
@@ -1659,8 +1665,8 @@ const CalculadoraDePrazo = ({ numeroProcesso }) => {
                                         <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-2 overscroll-contain">
                                             {/* Feriado CNJ Especial */}
                                             {resultado.suspensoesComprovaveis.some(d => d.tipo === 'feriado_cnj') && (
-                                                <label className={`flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all ${diasComprovados.has(DATA_CORPUS_CHRISTI) ? 'bg-indigo-600 border border-indigo-500 shadow-lg' : 'bg-slate-900/50 border border-white/5 hover:bg-white/5'}`}>
-                                                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${diasComprovados.has(DATA_CORPUS_CHRISTI) ? 'bg-indigo-400 border-indigo-400' : 'border-slate-700'}`}>
+                                                <label className={`flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all border ${diasComprovados.has(DATA_CORPUS_CHRISTI) ? 'tjpr-bg-primary border-transparent shadow-lg' : 'tjpr-bg-main tjpr-border-main hover:tjpr-bg-alt'}`}>
+                                                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${diasComprovados.has(DATA_CORPUS_CHRISTI) ? 'bg-white/20 border-white/40' : 'tjpr-border-main'}`}>
                                                         {diasComprovados.has(DATA_CORPUS_CHRISTI) && <span className="material-symbols-rounded text-white text-xs font-black">check</span>}
                                                     </div>
                                                     <input
@@ -1670,8 +1676,8 @@ const CalculadoraDePrazo = ({ numeroProcesso }) => {
                                                         className="hidden"
                                                     />
                                                     <div className="flex flex-col">
-                                                        <span className={`text-[11px] font-bold ${diasComprovados.has(DATA_CORPUS_CHRISTI) ? 'text-white' : 'text-slate-300'}`}>Corpus Christi e Suspensão</span>
-                                                        <span className={`text-[9px] font-black uppercase tracking-widest ${diasComprovados.has(DATA_CORPUS_CHRISTI) ? 'text-indigo-200' : 'text-slate-500'}`}>Feriado CNJ</span>
+                                                        <span className={`text-[11px] font-bold ${diasComprovados.has(DATA_CORPUS_CHRISTI) ? 'text-white' : 'tjpr-text-main'}`}>Corpus Christi e Suspensão</span>
+                                                        <span className={`text-[9px] font-black uppercase tracking-widest ${diasComprovados.has(DATA_CORPUS_CHRISTI) ? 'text-white/80' : 'tjpr-text-dim'}`}>Feriado CNJ</span>
                                                     </div>
                                                 </label>
                                             )}
@@ -1681,8 +1687,8 @@ const CalculadoraDePrazo = ({ numeroProcesso }) => {
                                                 const dataStr = dia.data.toISOString().split('T')[0];
                                                 const isSelected = diasComprovados.has(dataStr);
                                                 return (
-                                                    <label key={dataStr} className={`flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all ${isSelected ? 'bg-indigo-600 border border-indigo-500 shadow-lg' : 'bg-slate-900/50 border border-white/5 hover:bg-white/5'}`}>
-                                                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${isSelected ? 'bg-indigo-400 border-indigo-400' : 'border-slate-700'}`}>
+                                                    <label key={dataStr} className={`flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all border ${isSelected ? 'tjpr-bg-primary border-transparent shadow-lg' : 'tjpr-bg-main tjpr-border-main hover:tjpr-bg-alt'}`}>
+                                                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${isSelected ? 'bg-white/20 border-white/40' : 'tjpr-border-main'}`}>
                                                             {isSelected && <span className="material-symbols-rounded text-white text-xs font-black">check</span>}
                                                         </div>
                                                         <input 
@@ -1692,8 +1698,8 @@ const CalculadoraDePrazo = ({ numeroProcesso }) => {
                                                             className="hidden"
                                                         />
                                                         <div className="flex flex-col">
-                                                            <span className={`text-[11px] font-bold ${isSelected ? 'text-white' : 'text-slate-300'}`}>{formatarData(dia.data)}: {dia.motivo}</span>
-                                                            <span className={`text-[9px] font-black uppercase tracking-widest ${isSelected ? 'text-indigo-200' : 'text-slate-500'}`}>{dia.tipo}</span>
+                                                            <span className={`text-[11px] font-bold ${isSelected ? 'text-white' : 'tjpr-text-main'}`}>{formatarData(dia.data)}: {dia.motivo}</span>
+                                                            <span className={`text-[9px] font-black uppercase tracking-widest ${isSelected ? 'text-white/80' : 'tjpr-text-dim'}`}>{dia.tipo}</span>
                                                         </div>
                                                     </label>
                                                 );
@@ -1712,15 +1718,15 @@ const CalculadoraDePrazo = ({ numeroProcesso }) => {
 
                     {/* Verificação de Tempestividade (Intermediate/Admin) */}
                     {(userData?.role === 'intermediate' || userData?.role === 'admin') && (
-                        <div className="mt-12 tjpr-bg-alt border tjpr-border-main rounded-3xl p-8 backdrop-blur-xl relative z-10 overflow-hidden">
+                        <div className="mt-8 tjpr-bg-alt border tjpr-border-main rounded-3xl p-6 backdrop-blur-xl relative z-10 overflow-hidden">
                             <div className="absolute bottom-0 right-0 w-64 h-64 bg-indigo-600/5 blur-[100px] rounded-full -mr-32 -mb-32 pointer-events-none"></div>
                             
-                            <div className="flex items-center gap-4 mb-8">
+                            <div className="flex items-center gap-4 mb-6">
                                 <span className="material-symbols-rounded tjpr-text-primary">gavel</span>
-                                <h3 className="text-lg font-black tjpr-text-main uppercase tracking-[0.2em]">Exame de Tempestividade</h3>
+                                <h3 className="text-sm font-black tjpr-text-main uppercase tracking-[0.2em]">Exame de Tempestividade</h3>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-end">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
                                 <TJPRInput 
                                     label="Data de Interposição"
                                     type="date" 
@@ -1786,7 +1792,7 @@ const CalculadoraDePrazo = ({ numeroProcesso }) => {
                 maxWidth="md"
             >
                 <div className="space-y-8 py-4">
-                    <div className="p-8 bg-slate-950/40 rounded-[2rem] border border-white/5 relative overflow-hidden group">
+                    <div className="p-8 tjpr-bg-alt rounded-[2rem] border tjpr-border-main relative overflow-hidden group">
                         <div className="absolute -right-4 -top-4 w-24 h-24 bg-indigo-500/10 blur-3xl rounded-full transition-all group-hover:scale-150"></div>
                         <div className="relative z-10">
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4 block">Código AR do Usuário</label>
@@ -2487,7 +2493,9 @@ const AdminPage = ({ setCurrentArea, initialSection }) => {
                     setorId: u.setor_id,
                     displayName: u.display_name,
                     emailVerified: u.email_verified,
-                    avatarColor: u.avatar_color
+                    avatarColor: u.avatar_color,
+                    acesso_minutario: u.acesso_minutario,
+                    acesso_minuta_preparo: u.acesso_minuta_preparo
                 }));
                 setAllUsersForManagement(mappedUsers);
                 return mappedUsers;
@@ -2503,7 +2511,9 @@ const AdminPage = ({ setCurrentArea, initialSection }) => {
                     setorId: u.setor_id,
                     displayName: u.display_name,
                     emailVerified: u.email_verified,
-                    avatarColor: u.avatar_color
+                    avatarColor: u.avatar_color,
+                    acesso_minutario: u.acesso_minutario,
+                    acesso_minuta_preparo: u.acesso_minuta_preparo
                 }));
                 setAllUsersForManagement(mappedUsers);
                 return mappedUsers;
@@ -2609,16 +2619,19 @@ const AdminPage = ({ setCurrentArea, initialSection }) => {
     const UserManagementModal = ({ user, setores, adminUser, onClose, onSave }) => {
         const [role, setRole] = useState(user.role);
         const [setorId, setSetorId] = useState(user.setorId || '');
+        const [acessoMinutario, setAcessoMinutario] = useState(user.acesso_minutario || user.acessoMinutario || false);
+        const [acessoMinutaPreparo, setAcessoMinutaPreparo] = useState(user.acesso_minuta_preparo || user.acessoMinutaPreparo || false);
         const [isSaving, setIsSaving] = useState(false);
 
         const handleSave = async () => {
             setIsSaving(true);
             try {
-                await onSave(user.id, { role, setorId });
+                await onSave(user.id, { role, setorId, acessoMinutario, acessoMinutaPreparo });
                 onClose();
             } catch (err) {
+                const msg = err?.message || err?.error?.message || String(err);
                 console.error("Erro ao salvar permissões:", err);
-                alert("Falha ao salvar permissões.");
+                window.showToast?.("Erro: " + msg, "error");
             } finally {
                 setIsSaving(false);
             }
@@ -2668,6 +2681,34 @@ const AdminPage = ({ setCurrentArea, initialSection }) => {
                                 ...setores.map(s => ({ value: s.id, label: s.nome }))
                             ]}
                         />
+
+                        <div className="border-t tjpr-border-main pt-6">
+                            <p className="text-[11px] font-black tjpr-text-dim uppercase tracking-wider mb-4">Permissões Específicas</p>
+
+                            <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
+                                <div>
+                                    <p className="text-sm font-bold text-white">Acesso ao Minutário</p>
+                                    <p className="text-[10px] text-slate-400">Permite usar o sistema de modelos de texto</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" className="sr-only peer" checked={acessoMinutario}
+                                        onChange={e => setAcessoMinutario(e.target.checked)} />
+                                    <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-indigo-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                                </label>
+                            </div>
+
+                            <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/50 border border-slate-700/50 mt-3">
+                                <div>
+                                    <p className="text-sm font-bold text-white">Acesso à Minuta de Preparo</p>
+                                    <p className="text-[10px] text-slate-400">Permite usar o sistema de preparo de minutas</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" className="sr-only peer" checked={acessoMinutaPreparo}
+                                        onChange={e => setAcessoMinutaPreparo(e.target.checked)} />
+                                    <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-indigo-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                                </label>
+                            </div>
+                        </div>
                     </div>
                     <div className="flex border-t tjpr-border-main tjpr-bg-alt">
                         <button onClick={onClose} className="flex-1 px-8 py-6 text-xs font-black uppercase tracking-widest tjpr-text-dim hover:tjpr-text-main hover:tjpr-bg-hover transition-all">
@@ -2731,10 +2772,11 @@ const AdminPage = ({ setCurrentArea, initialSection }) => {
     const handleSaveUserPermissions = async (userId, data) => {
         if (!window._supabaseClient) return;
         
-        // Mapeia de volta para snake_case para o Supabase
         const updateData = {
             role: data.role,
-            setor_id: data.setorId || null
+            setor_id: data.setorId || null,
+            acesso_minutario: data.acessoMinutario ?? false,
+            acesso_minuta_preparo: data.acessoMinutaPreparo ?? false
         };
 
         const { error } = await window._supabaseClient
@@ -2743,7 +2785,7 @@ const AdminPage = ({ setCurrentArea, initialSection }) => {
             .eq('id', userId);
 
         if (error) throw error;
-        await window.logAudit(window._supabaseClient, user, 'ALTERAR_PERMISSOES', `User: ${userId}, Role: ${data.role}, Setor: ${data.setorId}`);
+        await window.logAudit(window._supabaseClient, user, 'ALTERAR_PERMISSOES', `User: ${userId}, Role: ${data.role}, Setor: ${data.setorId}, Minutario: ${data.acessoMinutario}, Minuta: ${data.acessoMinutaPreparo}`);
     };
 
     const handleCloseUserManagementModal = () => {
@@ -4185,7 +4227,7 @@ const ProfileModal = ({ user, userData, onClose, onUpdate }) => {
             onUpdate();
             setTimeout(() => onClose(), 1500);
         } catch (err) {
-            setError('Nao foi possivel atualizar o perfil. Tente novamente.');
+            setError('Nao foi possivel atualizar o perfil: ' + (err.message || 'Erro desconhecido'));
             console.error('Erro ao atualizar perfil:', err);
         } finally {
             setIsSaving(false);
@@ -4233,25 +4275,25 @@ const ProfileModal = ({ user, userData, onClose, onUpdate }) => {
     const previewUserData = { ...userData, display_name: displayName, avatar_color: avatarColor, photoURL: photoPreview };
 
     return (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center z-[100] p-4 animate-in fade-in duration-300" onClick={onClose}>
-            <div className="tjpr-bg-main border border-white/10 w-full max-w-md rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh]" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xl flex items-center justify-center z-[100] p-4 animate-in fade-in duration-300" onClick={onClose}>
+            <div className="tjpr-bg-main border tjpr-border-main w-full max-w-md rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh]" onClick={e => e.stopPropagation()}>
 
-                <div className="flex justify-between items-center p-8 border-b border-white/5 bg-white/[0.02] flex-shrink-0">
+                <div className="flex justify-between items-center p-8 border-b tjpr-border-main bg-white/[0.02] flex-shrink-0">
                     <div>
-                        <h2 className="text-2xl font-black text-white tracking-tight">Meu Perfil</h2>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">Gerencie sua identidade digital</p>
+                        <h2 className="text-2xl font-black tjpr-text-main tracking-tight">Meu Perfil</h2>
+                        <p className="text-[10px] font-bold tjpr-text-dim uppercase tracking-[0.2em] mt-1">Gerencie sua identidade digital</p>
                     </div>
-                    <button onClick={onClose} className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-slate-400 hover:text-white transition-all">
+                    <button onClick={onClose} className="w-10 h-10 rounded-xl tjpr-bg-alt flex items-center justify-center tjpr-text-dim hover:tjpr-text-main transition-all">
                         <span className="material-symbols-rounded">close</span>
                     </button>
                 </div>
 
-                <div className="flex border-b border-white/5 flex-shrink-0">
+                <div className="flex border-b tjpr-border-main flex-shrink-0">
                     {[{ id: 'perfil', label: 'Perfil', icon: 'person' }, { id: 'senha', label: 'Segurança', icon: 'lock' }].map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex-1 flex items-center justify-center gap-2 py-4 text-xs font-black uppercase tracking-widest transition-all border-b-2 ${activeTab === tab.id ? 'text-tjpr-primary border-tjpr-primary' : 'text-slate-500 border-transparent hover:text-slate-300'}`}
+                            className={`flex-1 flex items-center justify-center gap-2 py-4 text-xs font-black uppercase tracking-widest transition-all border-b-2 ${activeTab === tab.id ? 'text-tjpr-primary border-tjpr-primary' : 'tjpr-text-dim border-transparent hover:tjpr-text-main'}`}
                         >
                             <span className="material-symbols-rounded text-sm">{tab.icon}</span>
                             {tab.label}
@@ -4268,7 +4310,7 @@ const ProfileModal = ({ user, userData, onClose, onUpdate }) => {
                                     <div className="absolute inset-0 bg-tjpr-primary/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                     <Avatar user={user} userData={previewUserData} size="h-28 w-28" />
                                     <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <span className="material-symbols-rounded text-white text-2xl">photo_camera</span>
+                                        <span className="material-symbols-rounded tjpr-text-main text-2xl">photo_camera</span>
                                     </div>
                                 </div>
                                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
@@ -4290,10 +4332,10 @@ const ProfileModal = ({ user, userData, onClose, onUpdate }) => {
                                         </button>
                                     )}
                                 </div>
-                                <p className="text-[10px] text-slate-600 font-medium text-center">JPG, PNG ou GIF - Max. 2 MB | Ou escolha uma cor abaixo</p>
+                                <p className="text-[10px] tjpr-text-dim font-medium text-center">JPG, PNG ou GIF - Max. 2 MB | Ou escolha uma cor abaixo</p>
                                 <div className="flex flex-wrap justify-center gap-3">
                                     {AVATAR_COLORS.map(color => (
-                                        <button key={color} onClick={() => setAvatarColor(color)} className={`h-8 w-8 rounded-full transition-all transform hover:scale-125 hover:shadow-lg ${avatarColor === color && !photoPreview ? 'ring-2 ring-white ring-offset-4 ring-offset-slate-900 scale-110' : 'opacity-40 hover:opacity-100'}`} style={{ backgroundColor: color }}></button>
+                                        <button key={color} onClick={() => setAvatarColor(color)} className={`h-8 w-8 rounded-full transition-all transform hover:scale-125 hover:shadow-lg ${avatarColor === color && !photoPreview ? 'ring-2 ring-tjpr-text-main ring-offset-4 ring-offset-tjpr-bg-main scale-110' : 'opacity-40 hover:opacity-100'}`} style={{ backgroundColor: color }}></button>
                                     ))}
                                 </div>
                             </div>
@@ -4307,8 +4349,8 @@ const ProfileModal = ({ user, userData, onClose, onUpdate }) => {
                                     icon="person"
                                 />
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">E-mail Institucional</label>
-                                    <div className="w-full px-4 py-4 tjpr-bg-alt/50 border border-white/5 rounded-xl text-slate-400 font-bold text-sm">{user.email}</div>
+                                    <label className="text-[10px] font-black tjpr-text-dim uppercase tracking-widest ml-1">E-mail Institucional</label>
+                                    <div className="w-full px-4 py-4 tjpr-bg-alt border tjpr-border-main rounded-xl tjpr-text-dim font-bold text-sm">{user.email}</div>
                                 </div>
                             </div>
 
@@ -4316,7 +4358,7 @@ const ProfileModal = ({ user, userData, onClose, onUpdate }) => {
                             {message && <p className="text-xs font-bold text-center text-emerald-500 uppercase tracking-widest">{message}</p>}
 
                             <div className="pt-2 space-y-3">
-                                <button onClick={handleSave} disabled={isSaving} className="w-full h-14 flex justify-center items-center bg-tjpr-primary hover:opacity-90 text-white font-black uppercase tracking-[0.2em] rounded-xl transition-all shadow-lg shadow-tjpr-primary/20 disabled:opacity-50">
+                                <button onClick={handleSave} disabled={isSaving} className="w-full h-14 flex justify-center items-center bg-tjpr-primary hover:opacity-90 tjpr-text-main font-black uppercase tracking-[0.2em] rounded-xl transition-all shadow-lg shadow-tjpr-primary/20 disabled:opacity-50">
                                     {isSaving ? 'Salvando...' : 'Salvar Alterações'}
                                 </button>
                                 <button onClick={handleDeleteAccount} className="w-full py-3 flex justify-center items-center text-rose-500 hover:text-rose-400 text-[10px] font-black uppercase tracking-widest transition-all">
@@ -4331,25 +4373,25 @@ const ProfileModal = ({ user, userData, onClose, onUpdate }) => {
                             <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center mx-auto mb-2">
                                 <span className="material-symbols-rounded text-indigo-400">lock</span>
                             </div>
-                            <p className="text-center text-[10px] font-bold text-slate-500 uppercase tracking-widest">Altere sua senha de acesso</p>
+                            <p className="text-center text-[10px] font-bold tjpr-text-dim uppercase tracking-widest">Altere sua senha de acesso</p>
 
                             <div className="space-y-2">
-                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Senha Atual</label>
-                                <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required placeholder="..." className="w-full px-4 py-3 tjpr-bg-alt/50 border border-white/10 rounded-xl focus:ring-2 focus:ring-tjpr-primary outline-none transition text-white placeholder:text-slate-600" />
+                                <label className="block text-[10px] font-black tjpr-text-dim uppercase tracking-widest mb-2">Senha Atual</label>
+                                <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required placeholder="..." className="w-full px-4 py-3 tjpr-bg-alt border tjpr-border-main rounded-xl focus:ring-2 focus:ring-tjpr-primary outline-none transition tjpr-text-main placeholder:tjpr-text-dim" />
                             </div>
                             <div className="space-y-2">
-                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Nova Senha</label>
-                                <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required placeholder="Mínimo 6 caracteres" className="w-full px-4 py-3 tjpr-bg-alt/50 border border-white/10 rounded-xl focus:ring-2 focus:ring-tjpr-primary outline-none transition text-white placeholder:text-slate-600" />
+                                <label className="block text-[10px] font-black tjpr-text-dim uppercase tracking-widest mb-2">Nova Senha</label>
+                                <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required placeholder="Mínimo 6 caracteres" className="w-full px-4 py-3 tjpr-bg-alt border tjpr-border-main rounded-xl focus:ring-2 focus:ring-tjpr-primary outline-none transition tjpr-text-main placeholder:tjpr-text-dim" />
                             </div>
                             <div className="space-y-2">
-                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Confirmar Nova Senha</label>
-                                <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required placeholder="Repita a nova senha" className="w-full px-4 py-3 tjpr-bg-alt/50 border border-white/10 rounded-xl focus:ring-2 focus:ring-tjpr-primary outline-none transition text-white placeholder:text-slate-600" />
+                                <label className="block text-[10px] font-black tjpr-text-dim uppercase tracking-widest mb-2">Confirmar Nova Senha</label>
+                                <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required placeholder="Repita a nova senha" className="w-full px-4 py-3 tjpr-bg-alt border tjpr-border-main rounded-xl focus:ring-2 focus:ring-tjpr-primary outline-none transition tjpr-text-main placeholder:tjpr-text-dim" />
                             </div>
 
                             {pwError && <p className="text-xs font-bold text-center text-rose-500 uppercase tracking-widest">{pwError}</p>}
                             {pwMessage && <p className="text-xs font-bold text-center text-emerald-500 uppercase tracking-widest">{pwMessage}</p>}
 
-                            <button type="submit" disabled={isSavingPw} className="w-full h-14 flex justify-center items-center bg-tjpr-primary hover:opacity-90 text-white font-black uppercase tracking-[0.2em] rounded-xl transition-all shadow-lg shadow-tjpr-primary/20 disabled:opacity-50">
+                            <button type="submit" disabled={isSavingPw} className="w-full h-14 flex justify-center items-center bg-tjpr-primary hover:opacity-90 tjpr-text-main font-black uppercase tracking-[0.2em] rounded-xl transition-all shadow-lg shadow-tjpr-primary/20 disabled:opacity-50">
                                 {isSavingPw ? 'Salvando...' : 'Alterar Senha'}
                             </button>
                         </form>
@@ -4359,18 +4401,18 @@ const ProfileModal = ({ user, userData, onClose, onUpdate }) => {
 
             {showDeleteConfirm && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[110] p-4 animate-in fade-in duration-300" onClick={() => setShowDeleteConfirm(false)}>
-                    <div className="bg-slate-900 border border-rose-500/30 w-full max-w-sm rounded-[2rem] shadow-2xl p-8 animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
+                    <div className="tjpr-bg-main border border-rose-500/30 w-full max-w-sm rounded-[2rem] shadow-2xl p-8 animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
                         <div className="text-center space-y-4">
                             <div className="w-16 h-16 bg-rose-500/20 rounded-2xl flex items-center justify-center mx-auto text-rose-500 mb-4">
                                 <span className="material-symbols-rounded text-3xl">warning</span>
                             </div>
-                            <h3 className="text-xl font-black text-white tracking-tight">Excluir Conta?</h3>
-                            <p className="text-xs text-slate-400 leading-relaxed font-bold">Esta acao e irreversivel. Todos os seus dados serao removidos permanentemente.</p>
+                            <h3 className="text-xl font-black tjpr-text-main tracking-tight">Excluir Conta?</h3>
+                            <p className="text-xs tjpr-text-dim leading-relaxed font-bold">Esta acao e irreversivel. Todos os seus dados serao removidos permanentemente.</p>
                             <div className="space-y-4 pt-4">
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Digite <span className="text-rose-500">EXCLUIR</span> para confirmar:</p>
-                                <input type="text" value={deleteConfirmInput} onChange={e => setDeleteConfirmInput(e.target.value)} placeholder="Digite aqui..." className="w-full px-4 py-3 bg-slate-950 border border-white/10 rounded-xl text-center font-black tracking-widest text-white uppercase focus:ring-2 focus:ring-rose-500 outline-none transition" />
+                                <p className="text-[10px] font-black tjpr-text-dim uppercase tracking-widest">Digite <span className="text-rose-500">EXCLUIR</span> para confirmar:</p>
+                                <input type="text" value={deleteConfirmInput} onChange={e => setDeleteConfirmInput(e.target.value)} placeholder="Digite aqui..." className="w-full px-4 py-3 tjpr-bg-alt border tjpr-border-main rounded-xl text-center font-black tracking-widest tjpr-text-main uppercase focus:ring-2 focus:ring-rose-500 outline-none transition" />
                                 <div className="flex gap-3 pt-2">
-                                    <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-slate-400 font-bold rounded-xl transition-all">Cancelar</button>
+                                    <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-3 tjpr-bg-alt hover:tjpr-bg-main tjpr-text-dim font-bold rounded-xl transition-all">Cancelar</button>
                                     <button onClick={confirmDelete} className="flex-1 py-3 bg-rose-600 hover:bg-rose-500 text-white font-black rounded-xl transition-all shadow-lg shadow-rose-600/20">Excluir</button>
                                 </div>
                             </div>
@@ -4382,7 +4424,7 @@ const ProfileModal = ({ user, userData, onClose, onUpdate }) => {
     );
 };
 const Sidebar = ({ isOpen, setIsOpen, isCollapsed, toggleCollapse, deferredPrompt, onInstallClick }) => {
-    const { user, userData, openCalendario, currentArea, setCurrentArea, isAdmin, isSetorAdmin } = useAuth();
+    const { user, userData, openCalendario, currentArea, setCurrentArea, isAdmin, isSetorAdmin, acessoMinutario, acessoMinutaPreparo } = useAuth();
     const { openBugReport } = useContext(BugReportContext);
 
     const menuItems = [
@@ -4391,8 +4433,9 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, toggleCollapse, deferredPromp
             label: 'Calculadora', 
             icon: 'calculate'
         },
-        { id: 'Minuta', label: 'Minuta de Preparo', icon: 'description' },
-        { id: 'Minutario', label: 'Minutário', icon: 'article' },
+        { id: 'TriagemIA', label: 'Análise de Triagem', icon: 'psychology' },
+        { id: 'Minuta', label: 'Minuta de Preparo', icon: 'description', condition: acessoMinutaPreparo },
+        { id: 'Minutario', label: 'Minutário', icon: 'article', condition: acessoMinutario },
         { id: 'Admin', label: 'Administração', icon: 'admin_panel_settings', condition: !!(isAdmin || isSetorAdmin) },
     ];
 
@@ -4531,6 +4574,23 @@ const CalculatorApp = () => {
         </div>
     );
 };
+
+const PermissaoNegada = ({ area }) => (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <span className="material-symbols-rounded text-6xl text-slate-700 mb-4">lock</span>
+        <h2 className="text-2xl font-black text-white mb-2">Acesso Restrito</h2>
+        <p className="text-slate-500 max-w-md mx-auto">
+            Você não tem permissão para acessar o módulo <strong>{area}</strong>.
+            Solicite a liberação ao administrador do sistema.
+        </p>
+        <button 
+            onClick={() => window.setCurrentArea?.('Calculadora')} 
+            className="mt-8 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors"
+        >
+            Voltar para o Início
+        </button>
+    </div>
+);
 
 const CreditsWatermark = () => (
     <div className="text-xs text-slate-500 dark:text-slate-600 text-center opacity-40 hover:opacity-100 transition-opacity duration-500">
@@ -4853,7 +4913,7 @@ const ToastNotification = ({ notification, onClose, onNotificationClick }) => {
 };
 
 const App = () => {
-    const { user, userData, isAdmin, isSetorAdmin, loading, refreshUser, currentArea, setCurrentArea } = useAuth();
+    const { user, userData, isAdmin, isSetorAdmin, loading, refreshUser, currentArea, setCurrentArea, acessoMinutario, acessoMinutaPreparo } = useAuth();
     const { settings, updateSettings } = useContext(SettingsContext);
     const [showCalendario, setShowCalendario] = useState(false);
     const [showProfile, setShowProfile] = useState(false);
@@ -5094,6 +5154,8 @@ const App = () => {
                     currentArea={currentArea}
                     onNavigate={(area) => setCurrentArea(area)}
                     isAdmin={userData?.role === 'admin' || userData?.role === 'setor_admin'}
+                    isSetorAdmin={userData?.role === 'setor_admin'}
+                    isIntermediate={userData?.role === 'intermediate'}
                     notifications={notifications}
                     onToggleNotifications={() => setShowNotifications(!showNotifications)}
                 />
@@ -5108,16 +5170,26 @@ const App = () => {
 
                 <main className="flex-1 overflow-hidden relative z-10">
                     {currentArea === 'Minutario' ? (
-                        <div className="h-full overflow-y-auto custom-scrollbar">
-                            <MinutarioPage />
-                        </div>
+                        acessoMinutario ? (
+                            <div className="h-full overflow-y-auto custom-scrollbar">
+                                <MinutarioPage />
+                            </div>
+                        ) : (
+                            <PermissaoNegada area="Minutário" />
+                        )
                     ) : (
-                        <div className="h-full overflow-y-auto p-4 sm:p-8 lg:p-12 custom-scrollbar">
+                        <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8 xl:p-12 custom-scrollbar">
                             <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                                 {currentArea === 'Calculadora' ? (
                                     <CalculatorApp />
+                                ) : currentArea === 'TriagemIA' ? (
+                                    <TriagemIAPage />
                                 ) : currentArea === 'Minuta' ? (
-                                    <MinutaPreparoPage />
+                                    acessoMinutaPreparo ? (
+                                        <MinutaPreparoPage />
+                                    ) : (
+                                        <PermissaoNegada area="Minuta de Preparo" />
+                                    )
                                 ) : currentArea === 'Admin' && (isAdmin || isSetorAdmin) ? (
                                     <AdminPage 
                                         setCurrentArea={setCurrentArea} 

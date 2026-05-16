@@ -1,0 +1,29 @@
+{
+  "name": "minutario-desktop",
+  "version": "1.0.0",
+  "description": "Minutário - Expansor de texto global com sincronização Supabase",
+  "main": "src/main/index.js",
+  "author": "TJPR",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "rebuild": "npx @electron/rebuild -f -w uiohook-napi",
+    "publish": "node scripts/upload-installer.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "electron-store": "^8.1.0",
+    "electron-updater": "^6.1.7",
+    "uiohook-napi": "^1.5.2"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.6.0",
+    "7zip-bin": "^5.2.0",
+    "electron": "^28.1.0",
+    "electron-builder": "^24.9.1"
+  }
+}

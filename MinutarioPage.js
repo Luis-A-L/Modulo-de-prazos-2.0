@@ -27,7 +27,9 @@ const MinutarioPage = () => {
     const [copiedId, setCopiedId] = useState(null);
     const [syncing, setSyncing] = useState(false);
     const [downloading, setDownloading] = useState(false);
+    const [downloadingDesktop, setDownloadingDesktop] = useState(false);
     const [showDownloadModal, setShowDownloadModal] = useState(false);
+    const [downloadTab, setDownloadTab] = useState('ext');
     const [syncStatus, setSyncStatus] = useState('');
 
     const EXTENSION_FILES = [
@@ -354,6 +356,78 @@ const MinutarioPage = () => {
         }
     };
 
+    const detectPlatform = () => {
+        if (navigator.userAgent.includes('Windows')) return 'win32';
+        if (navigator.userAgent.includes('Mac')) return 'darwin';
+        if (navigator.userAgent.includes('Linux')) return 'linux';
+        return 'win32';
+    };
+
+    const handleDownloadDesktopInstaller = async () => {
+        if (downloadingDesktop) return;
+        setDownloadingDesktop(true);
+        try {
+            const platform = detectPlatform();
+            const fileName = {
+                win32: 'Minutario-Portable-latest.exe',
+                darwin: 'Minutario-latest.dmg',
+                linux: 'Minutario-latest.AppImage',
+            }[platform] || 'Minutario-Portable-latest.exe';
+
+            const urlsToTry = [
+                null,
+                'https://github.com/Luis-A-L/Modulo-de-prazos-2.0/releases/download/v1.0.0/' + fileName,
+                'https://ifkhwqfxtdfbotifxfzq.supabase.co/storage/v1/object/public/minutario-installers/' + fileName,
+                './Minutario-Portable-latest.exe',
+            ];
+
+            const sb = window._supabaseClient;
+            if (sb) {
+                try {
+                    const { data, error } = await sb.storage
+                        .from('minutario-installers')
+                        .createSignedUrl(fileName, 3600);
+                    if (!error && data?.signedUrl) {
+                        urlsToTry[0] = data.signedUrl;
+                    }
+                } catch (_) {}
+            }
+
+            let downloaded = false;
+            for (const url of urlsToTry) {
+                if (!url) continue;
+                try {
+                    const resp = await fetch(url, { method: 'HEAD' });
+                    if (resp.ok || resp.status === 200) {
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = fileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.showToast?.('Download iniciado!', 'success');
+                        downloaded = true;
+                        return;
+                    }
+                } catch (_) {}
+            }
+
+            if (!downloaded) {
+                const a = document.createElement('a');
+                a.href = urlsToTry[1] || urlsToTry[2];
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.showToast?.('Download iniciado! (pode falhar se o arquivo não estiver no servidor)', 'info');
+            }
+        } catch (err) {
+            console.error('Erro ao baixar instalador:', err);
+            window.showToast?.('Erro ao baixar instalador.', 'error');
+        } finally {
+            setDownloadingDesktop(false);
+        }
+    };
 
     const totalTemplates = allTemplates.length;
     const folderCounts = {};
@@ -562,10 +636,18 @@ const MinutarioPage = () => {
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                     <button
-                        onClick={() => setShowDownloadModal(true)}
+                        onClick={() => { setDownloadTab('desktop'); setShowDownloadModal(true); }}
                         className="px-3 py-2 rounded-lg tjpr-bg-alt border tjpr-border-main text-emerald-500 hover:text-emerald-400 hover:border-emerald-500/30 transition-all text-xs font-bold uppercase tracking-wider flex items-center gap-1.5"
+                        title="Baixar app desktop para o sistema"
+                    >
+                        <span className="material-symbols-rounded text-sm">download</span>
+                        App
+                    </button>
+                    <button
+                        onClick={() => { setDownloadTab('ext'); setShowDownloadModal(true); }}
+                        className="px-3 py-2 rounded-lg tjpr-bg-alt border tjpr-border-main text-indigo-500 hover:text-indigo-400 hover:border-indigo-500/30 transition-all text-xs font-bold uppercase tracking-wider flex items-center gap-1.5"
                         title="Baixar extensão para o navegador"
                     >
                         <span className="material-symbols-rounded text-sm">extension</span>
@@ -631,7 +713,7 @@ const MinutarioPage = () => {
             {/* Content */}
             <div className="flex-1 flex overflow-hidden bg-white dark:bg-slate-900">
                 {/* Left Panel - Folders + List */}
-                <div className="w-72 lg:w-80 border-r border-slate-200 dark:border-slate-700 flex flex-col bg-slate-50/50 dark:bg-slate-800/30">
+                <div className="w-60 lg:w-72 xl:w-80 border-r border-slate-200 dark:border-slate-700 flex flex-col bg-slate-50/50 dark:bg-slate-800/30">
                     {/* Folders */}
                     <div className="px-4 pt-4 pb-2">
                         <div className="flex items-center justify-between mb-2">
@@ -797,74 +879,177 @@ const MinutarioPage = () => {
                 </div>
             </div>
 
-            {/* Modal Download Extensão */}
+            {/* Modal Download */}
             <TJPRModal
                 isOpen={showDownloadModal}
                 onClose={() => setShowDownloadModal(false)}
-                title="Instalar Extensão Minutário"
-                icon="extension"
+                title="Instalar Minutário"
+                icon="download"
                 maxWidth="lg"
             >
+                {/* Tabs */}
+                <div className="flex gap-1 mb-6 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                    <button
+                        onClick={() => setDownloadTab('ext')}
+                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                            downloadTab === 'ext'
+                                ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                        }`}
+                    >
+                        <span className="material-symbols-rounded text-sm">extension</span>
+                        Extensão (Navegador)
+                    </button>
+                    <button
+                        onClick={() => setDownloadTab('desktop')}
+                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                            downloadTab === 'desktop'
+                                ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                        }`}
+                    >
+                        <span className="material-symbols-rounded text-sm">download</span>
+                        App Desktop
+                    </button>
+                </div>
+
+                {/* Content */}
                 <div className="space-y-6">
-                    <div className="flex items-start gap-4 p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/10">
-                        <span className="material-symbols-rounded text-indigo-400 text-2xl flex-shrink-0">info</span>
-                        <div className="text-xs font-medium tjpr-text-dim leading-relaxed">
-                            A extensão permite expandir seus modelos com atalhos de texto em qualquer página do navegador.
-                            Digite <code className="px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400">/</code> + atalho + <code className="px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400">Espaço</code> para expandir.
-                        </div>
-                    </div>
+                    {downloadTab === 'ext' ? (
+                        <>
+                            <div className="flex items-start gap-4 p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/10">
+                                <span className="material-symbols-rounded text-indigo-400 text-2xl flex-shrink-0">info</span>
+                                <div className="text-xs font-medium tjpr-text-dim leading-relaxed">
+                                    A extensão permite expandir seus modelos com atalhos de texto em qualquer página do navegador.
+                                    Digite <code className="px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400">/</code> + atalho + <code className="px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400">Espaço</code> para expandir.
+                                </div>
+                            </div>
 
-                    <div className="space-y-3">
-                        <h4 className="font-black text-sm tjpr-text-main uppercase tracking-widest flex items-center gap-2">
-                            <span className="material-symbols-rounded text-sm">download</span>
-                            Download
-                        </h4>
-                        <button
-                            onClick={handleDownloadExtension}
-                            disabled={downloading}
-                            className={`w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl font-bold text-sm uppercase tracking-wider text-white transition-all ${
-                                downloading
-                                    ? 'bg-indigo-400 cursor-not-allowed'
-                                    : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg hover:shadow-xl'
-                            }`}
-                        >
-                            <span className={`material-symbols-rounded ${downloading ? 'animate-spin' : ''}`}>
-                                {downloading ? 'sync' : 'extension'}
-                            </span>
-                            {downloading ? 'Gerando ZIP...' : 'Baixar Extensão (.zip)'}
-                        </button>
-                    </div>
-
-                    <div className="space-y-3">
-                        <h4 className="font-black text-sm tjpr-text-main uppercase tracking-widest flex items-center gap-2">
-                            <span className="material-symbols-rounded text-sm">settings</span>
-                            Instalação
-                        </h4>
-                        <ol className="space-y-3 text-sm">
-                            {[
-                                'Faça o download do arquivo ZIP acima e extraia em uma pasta.',
-                                'Abra o Chrome e vá para <b>chrome://extensions</b>.',
-                                'Ative o <b>Modo do Desenvolvedor</b> (canto superior direito).',
-                                'Clique em <b>Carregar sem compactação</b> e selecione a pasta extraída.',
-                                'Pronto! A extensão aparecerá no canto superior direito do navegador.'
-                            ].map((step, i) => (
-                                <li key={i} className="flex items-start gap-3">
-                                    <span className="w-6 h-6 rounded-full bg-indigo-500/10 text-indigo-400 flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5">
-                                        {i + 1}
+                            <div className="space-y-3">
+                                <h4 className="font-black text-sm tjpr-text-main uppercase tracking-widest flex items-center gap-2">
+                                    <span className="material-symbols-rounded text-sm">download</span>
+                                    Download
+                                </h4>
+                                <button
+                                    onClick={handleDownloadExtension}
+                                    disabled={downloading}
+                                    className={`w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl font-bold text-sm uppercase tracking-wider text-white transition-all ${
+                                        downloading
+                                            ? 'bg-indigo-400 cursor-not-allowed'
+                                            : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg hover:shadow-xl'
+                                    }`}
+                                >
+                                    <span className={`material-symbols-rounded ${downloading ? 'animate-spin' : ''}`}>
+                                        {downloading ? 'sync' : 'extension'}
                                     </span>
-                                    <span className="tjpr-text-main font-medium leading-relaxed" dangerouslySetInnerHTML={{ __html: step }} />
-                                </li>
-                            ))}
-                        </ol>
-                    </div>
+                                    {downloading ? 'Gerando ZIP...' : 'Baixar Extensão (.zip)'}
+                                </button>
+                            </div>
 
-                    <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/10 flex items-start gap-3">
-                        <span className="material-symbols-rounded text-amber-400 text-lg flex-shrink-0">warning</span>
-                        <div className="text-xs font-medium tjpr-text-dim leading-relaxed">
-                            Após instalar, acesse o Minutário pelo ícone da extensão ou atalho <code className="px-1.5 py-0.5 rounded bg-slate-700 text-slate-200">Ctrl+Shift+K</code>.
-                            Os modelos criados aqui serão sincronizados automaticamente com a extensão.
-                        </div>
-                    </div>
+                            <div className="space-y-3">
+                                <h4 className="font-black text-sm tjpr-text-main uppercase tracking-widest flex items-center gap-2">
+                                    <span className="material-symbols-rounded text-sm">settings</span>
+                                    Instalação
+                                </h4>
+                                <ol className="space-y-3 text-sm">
+                                    {[
+                                        'Faça o download do arquivo ZIP acima e extraia em uma pasta.',
+                                        'Abra o Chrome e vá para <b>chrome://extensions</b>.',
+                                        'Ative o <b>Modo do Desenvolvedor</b> (canto superior direito).',
+                                        'Clique em <b>Carregar sem compactação</b> e selecione a pasta extraída.',
+                                        'Pronto! A extensão aparecerá no canto superior direito do navegador.'
+                                    ].map((step, i) => (
+                                        <li key={i} className="flex items-start gap-3">
+                                            <span className="w-6 h-6 rounded-full bg-indigo-500/10 text-indigo-400 flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5">
+                                                {i + 1}
+                                            </span>
+                                            <span className="tjpr-text-main font-medium leading-relaxed" dangerouslySetInnerHTML={{ __html: step }} />
+                                        </li>
+                                    ))}
+                                </ol>
+                            </div>
+
+                            <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/10 flex items-start gap-3">
+                                <span className="material-symbols-rounded text-amber-400 text-lg flex-shrink-0">warning</span>
+                                <div className="text-xs font-medium tjpr-text-dim leading-relaxed">
+                                    Após instalar, acesse o Minutário pelo ícone da extensão ou atalho <code className="px-1.5 py-0.5 rounded bg-slate-700 text-slate-200">Ctrl+Shift+K</code>.
+                                    Os modelos criados aqui serão sincronizados automaticamente com a extensão.
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="flex items-start gap-4 p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
+                                <span className="material-symbols-rounded text-emerald-400 text-2xl flex-shrink-0">laptop_windows</span>
+                                <div className="text-xs font-medium tjpr-text-dim leading-relaxed">
+                                    O App Desktop funciona em <b>qualquer aplicativo</b> do seu computador: Word, Outlook, editores de texto, sites e muito mais.
+                                    Digite <code className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">/</code> + atalho + <code className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">Espaço</code> para expandir em qualquer lugar.
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-3 p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/10">
+                                <span className="material-symbols-rounded text-indigo-400 flex-shrink-0">sync</span>
+                                <div className="text-xs font-medium tjpr-text-dim leading-relaxed">
+                                    Os modelos são sincronizados automaticamente com sua conta. Faça login para manter tudo atualizado.
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <h4 className="font-black text-sm tjpr-text-main uppercase tracking-widest flex items-center gap-2">
+                                    <span className="material-symbols-rounded text-sm">download</span>
+                                    Download
+                                </h4>
+                                <button
+                                    onClick={handleDownloadDesktopInstaller}
+                                    disabled={downloadingDesktop}
+                                    className={`w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl font-bold text-sm uppercase tracking-wider text-white transition-all ${
+                                        downloadingDesktop
+                                            ? 'bg-emerald-400 cursor-not-allowed'
+                                            : 'bg-emerald-600 hover:bg-emerald-700 shadow-lg hover:shadow-xl'
+                                    }`}
+                                >
+                                    <span className={`material-symbols-rounded ${downloadingDesktop ? 'animate-spin' : ''}`}>
+                                        {downloadingDesktop ? 'sync' : 'download'}
+                                    </span>
+                                    {downloadingDesktop
+                                        ? 'Baixando...'
+                                        : `Baixar Portable (${detectPlatform() === 'darwin' ? '.dmg' : detectPlatform() === 'linux' ? '.AppImage' : '.exe'})`
+                                    }
+                                </button>
+                            </div>
+
+                            <div className="space-y-3">
+                                <h4 className="font-black text-sm tjpr-text-main uppercase tracking-widest flex items-center gap-2">
+                                    <span className="material-symbols-rounded text-sm">settings</span>
+                                    Funcionalidades
+                                </h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {[
+                                        ['keyboard', 'Expansão global', 'Funciona em qualquer aplicativo do sistema'],
+                                        ['sync', 'Sincronização', 'Modelos sincronizados com a nuvem'],
+                                        ['rocket_launch', 'Auto-inicialização', 'Inicia com o Windows automaticamente'],
+                                        ['update', 'Auto-update', 'Atualizações automáticas em segundo plano'],
+                                    ].map(([icon, title, desc]) => (
+                                        <div key={icon} className="flex items-start gap-3 p-3 rounded-xl bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                                            <span className="material-symbols-rounded text-emerald-400 flex-shrink-0">{icon}</span>
+                                            <div>
+                                                <div className="text-xs font-bold tjpr-text-main">{title}</div>
+                                                <div className="text-[10px] tjpr-text-dim">{desc}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/10 flex items-start gap-3">
+                                <span className="material-symbols-rounded text-amber-400 text-lg flex-shrink-0">warning</span>
+                                <div className="text-xs font-medium tjpr-text-dim leading-relaxed">
+                                    Após instalar, o Minutário ficará disponível na bandeja do sistema.
+                                    Use <code className="px-1.5 py-0.5 rounded bg-slate-700 text-slate-200">Ctrl+Shift+K</code> para abrir o acesso rápido.
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
             </TJPRModal>
         </div>

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.exe
+*.dmg
+*.AppImage
+*.deb
+*.snap
+*.zip
+out/
+release/
+cert/*.pfx
+.env

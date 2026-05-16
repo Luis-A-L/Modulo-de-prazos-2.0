@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Minutário - Acesso Rápido</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    </style>
+</head>
+<body>
+    <div id="root" class="h-screen flex flex-col"></div>
+    <script>
+        const { useState, useEffect, useCallback, useRef, createElement: h } = React;
+        const STORAGE_KEY = 'minutario_templates';
+
+        function App() {
+            const [templates, setTemplates] = useState([]);
+            const [query, setQuery] = useState('');
+            const [selectedIndex, setSelectedIndex] = useState(0);
+            const inputRef = useRef(null);
+            const listRef = useRef(null);
+
+            useEffect(() => {
+                function loadTemplates() {
+                    try {
+                        const data = localStorage.getItem(STORAGE_KEY);
+                        setTemplates(data ? JSON.parse(data) : []);
+                    } catch {}
+                }
+                loadTemplates();
+                window.addEventListener('storage', loadTemplates);
+                const interval = setInterval(loadTemplates, 2000);
+                return () => {
+                    window.removeEventListener('storage', loadTemplates);
+                    clearInterval(interval);
+                };
+            }, []);
+
+            useEffect(() => {
+                if (inputRef.current) inputRef.current.focus();
+            }, []);
+
+            useEffect(() => {
+                setSelectedIndex(0);
+            }, [query]);
+
+            const filtered = (query
+                ? templates.filter(t =>
+                    (t.name || '').toLowerCase().includes(query.toLowerCase()) ||
+                    (t.shortcut || '').toLowerCase().includes(query.toLowerCase())
+                  )
+                : templates
+            ).slice(0, 10);
+
+            function stripHtml(html) {
+                if (!html) return '';
+                return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+            }
+
+            async function handleSelect(template) {
+                const text = template.plain_text || stripHtml(template.content || template.html_content || '');
+                if (!text) return;
+
+                try {
+                    await navigator.clipboard.writeText(text);
+                    const el = document.getElementById('toast');
+                    if (el) {
+                        el.textContent = `"${template.name}" copiado! Use Ctrl+V para colar.`;
+                        el.classList.remove('opacity-0');
+                        setTimeout(() => el.classList.add('opacity-0'), 2000);
+                    }
+
+                    if (window.MinutarioDesktop) {
+                        setTimeout(() => window.MinutarioDesktop.showMainWindow(), 100);
+                    }
+                } catch {}
+            }
+
+            function handleKeyDown(e) {
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    setSelectedIndex(i => Math.min(i + 1, filtered.length - 1));
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    setSelectedIndex(i => Math.max(i - 1, 0));
+                } else if (e.key === 'Enter' && filtered[selectedIndex]) {
+                    e.preventDefault();
+                    handleSelect(filtered[selectedIndex]);
+                } else if (e.key === 'Escape') {
+                    if (window.MinutarioDesktop) window.MinutarioDesktop.showMainWindow();
+                }
+            }
+
+            useEffect(() => {
+                if (listRef.current && listRef.current.children[selectedIndex]) {
+                    listRef.current.children[selectedIndex].scrollIntoView({ block: 'nearest' });
+                }
+            }, [selectedIndex]);
+
+            return h('div', { className: 'flex flex-col h-full' },
+                /* Search input */
+                h('div', { className: 'p-3 border-b border-slate-700/50' },
+                    h('div', { className: 'relative' },
+                        h('span', {
+                            className: 'material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm',
+                        }, 'search'),
+                        h('input', {
+                            ref: inputRef,
+                            type: 'text',
+                            placeholder: 'Buscar modelo por nome ou atalho...',
+                            value: query,
+                            onChange: e => setQuery(e.target.value),
+                            onKeyDown: handleKeyDown,
+                            className: 'w-full pl-9 pr-3 py-2.5 text-sm rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors',
+                        }),
+                    ),
+                ),
+                /* Results */
+                h('div', {
+                    ref: listRef,
+                    className: 'flex-1 overflow-y-auto px-2 py-2 space-y-1',
+                },
+                    filtered.length === 0
+                        ? h('div', { className: 'text-center py-8 text-sm text-slate-500' },
+                            query ? 'Nenhum modelo encontrado' : 'Nenhum modelo ainda',
+                          )
+                        : filtered.map((template, index) =>
+                            h('div', {
+                                key: template.id,
+                                onClick: () => handleSelect(template),
+                                onMouseEnter: () => setSelectedIndex(index),
+                                className: `flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all ${
+                                    index === selectedIndex
+                                        ? 'bg-indigo-500/10 border border-indigo-500/20'
+                                        : 'hover:bg-slate-800/80 border border-transparent'
+                                }`,
+                            },
+                                h('div', {
+                                    className: 'w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center flex-shrink-0',
+                                },
+                                    h('span', { className: 'material-symbols-rounded text-sm text-indigo-400' }, 'description'),
+                                ),
+                                h('div', { className: 'flex-1 min-w-0' },
+                                    h('div', { className: 'text-sm font-semibold text-white truncate' }, template.name),
+                                    h('div', { className: 'flex items-center gap-2 mt-0.5' },
+                                        h('span', {
+                                            className: 'text-[10px] font-mono text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded',
+                                        }, '/' + (template.shortcut || '?')),
+                                        template.folder_name && h('span', {
+                                            className: 'text-[10px] text-slate-500',
+                                        }, template.folder_name),
+                                    ),
+                                ),
+                                h('span', {
+                                    className: 'material-symbols-rounded text-xs text-slate-600',
+                                }, 'chevron_right'),
+                            ),
+                        ),
+                ),
+                /* Hint */
+                h('div', {
+                    className: 'px-4 py-2 border-t border-slate-700/50 flex items-center justify-between text-[10px] text-slate-600',
+                },
+                    h('span', null, '\u2191\u2193 Navegar \u23ce Selecionar'),
+                    h('span', null, 'Esc Fechar'),
+                ),
+                /* Toast */
+                h('div', {
+                    id: 'toast',
+                    className: 'fixed bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-xs font-medium shadow-lg transition-opacity duration-300 opacity-0 pointer-events-none',
+                }),
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+    </script>
+</body>
+</html>

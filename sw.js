@@ -17,6 +17,7 @@ const urlsToCache = [
   './BugReportsPage.js',
   './CalendarAdminPage.js',
   './MinutasAdminPage.js',
+  './TriagemIAPage.js',
   './Logo.png',
   './manifest.json'
 ];

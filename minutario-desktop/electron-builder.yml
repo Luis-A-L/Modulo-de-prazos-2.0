@@ -1,0 +1,39 @@
+appId: br.tjpr.minutario
+productName: Minutario
+copyright: Copyright © 2026 TJPR
+
+directories:
+  output: dist
+  buildResources: build
+
+compression: maximum
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.png
+
+nsis:
+  oneClick: true
+  perMachine: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: false
+  shortcutName: Minutario
+  runAfterFinish: false
+  deleteAppDataOnUninstall: false
+
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+  icon: build/
+  category: Office
+
+publish:
+  - provider: github
+    owner: Luis-A-L
+    repo: Modulo-de-prazos-2.0
+    releaseType: release

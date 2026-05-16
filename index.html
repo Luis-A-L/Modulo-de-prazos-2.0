@@ -5,8 +5,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Módulo Prazos - P-SEP-AR - TJPR</title>
+    <meta name="color-scheme" content="light dark">
     <link rel="icon" href="Logo.png">
     <link rel="manifest" href="manifest.json">
+
+    <script>
+        // Inicialização imediata do tema para evitar FOUC
+        (function() {
+            const savedSettings = localStorage.getItem('appSettings');
+            const theme = savedSettings ? JSON.parse(savedSettings).theme : 'system';
+            const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            if (isDark) document.documentElement.classList.add('dark');
+        })();
+    </script>
 
     <!-- PWA iOS Support -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -69,6 +80,16 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
+    <!-- OCR Libraries for TriagemIA -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+    <script>
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+    </script>
+
 </head>
 
 <body
@@ -95,6 +116,7 @@
     <script src="CalendarAdminPage.js?v=16" type="text/babel"></script>
     <!-- Os arquivos de Estatísticas e Usuários serão criados a seguir -->
     <script src="BugReportsPage.js?v=16" type="text/babel"></script>
+    <script src="TriagemIAPage.js?v=1" type="text/babel"></script>
     <script src="MinutarioPage.js?v=1" type="text/babel"></script>
 
     <!-- Componentes do Design System TJPR -->

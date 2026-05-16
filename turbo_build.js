@@ -14,6 +14,7 @@ const files = [
   'CalendarAdminPage.js',
   'BugReportsPage.js',
   'MinutaPreparoPage.js',
+  'TriagemIAPage.js',
   'app.js'
 ];
 

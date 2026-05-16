@@ -65,6 +65,7 @@
     --tjpr-border: rgba(0, 0, 0, 0.08);
     --tjpr-surface: #ffffff;
     --tjpr-surface-alt: #f8fafc;
+    --tjpr-surface-glass: rgba(255, 255, 255, 0.8);
 }
 
 .dark {
@@ -98,6 +99,7 @@
     --tjpr-border: rgba(255, 255, 255, 0.08);
     --tjpr-surface: #0f172a;
     --tjpr-surface-alt: #020617;
+    --tjpr-surface-glass: rgba(15, 23, 42, 0.6);
 }
 
 /* Semantic Utility Classes */
@@ -476,12 +478,12 @@ main.overflow-y-auto {
 
 .tjpr-toast {
     width: 380px;
-    background-color: rgba(15, 23, 42, 0.4); /* slate-900/40 */
+    background-color: var(--tjpr-surface-glass);
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--tjpr-border);
     border-radius: 2rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow-elite);
     transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     animation: toast-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     position: relative;

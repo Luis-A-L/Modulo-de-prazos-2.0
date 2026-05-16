@@ -3,7 +3,7 @@
  * Componentes Elite do Design System P-SEP-AR
  */
 
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 // ============================================
 // COMPONENTES BASE - MONOLITH ELITE
@@ -257,8 +257,21 @@ const TJPRSelect = ({
 /**
  * TJPRHeader - Barra de Navegação Monolítica
  */
-const TJPRHeader = ({ user, onLogout, onToggleDarkMode, theme, onOpenProfile, currentArea, onNavigate, isAdmin, notifications, onToggleNotifications, onOpenCalendario }) => {
+const TJPRHeader = ({ user, onLogout, onToggleDarkMode, theme, onOpenProfile, currentArea, onNavigate, isAdmin, isSetorAdmin, isIntermediate, notifications, onToggleNotifications, onOpenCalendario }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const menuContainerRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (menuContainerRef.current && !menuContainerRef.current.contains(e.target)) {
+                setIsMenuOpen(false);
+            }
+        };
+        if (isMenuOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isMenuOpen]);
 
     return (
         <header className="tjpr-header">
@@ -309,7 +322,7 @@ const TJPRHeader = ({ user, onLogout, onToggleDarkMode, theme, onOpenProfile, cu
                         )}
 
                         {/* User Menu Elite */}
-                        <div className="relative">
+                        <div className="relative" ref={menuContainerRef}>
                             <button
                                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                                 className="flex items-center gap-3 p-2 pl-3 rounded-2xl tjpr-bg-alt hover:opacity-80 border tjpr-border-main transition-all"
@@ -319,14 +332,21 @@ const TJPRHeader = ({ user, onLogout, onToggleDarkMode, theme, onOpenProfile, cu
                                         {user?.displayName || 'Usuário'}
                                     </p>
                                     <p className="text-[9px] font-bold tjpr-text-dim uppercase mt-1">
-                                        {isAdmin ? 'Administrador' : 'Acessor'}
+                                        {isAdmin ? 'Administrador Global' 
+                                        : isSetorAdmin ? 'Chefe de Gabinete'
+                                        : isIntermediate ? 'Intermediário'
+                                        : 'Básico'}
                                     </p>
                                 </div>
                                 <div
-                                    className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-black/10 dark:shadow-black/20"
-                                    style={{ background: `linear-gradient(135deg, ${user?.avatarColor || '#4f46e5'}, #312e81)` }}
+                                    className={`w-10 h-10 rounded-xl flex items-center justify-center font-black shadow-lg shadow-black/10 dark:shadow-black/20 ${user?.photoURL ? 'overflow-hidden' : 'text-white'}`}
+                                    style={user?.photoURL ? {} : { background: `linear-gradient(135deg, ${user?.avatarColor || '#4f46e5'}, #312e81)` }}
                                 >
-                                    {user?.displayName?.charAt(0).toUpperCase() || 'U'}
+                                    {user?.photoURL ? (
+                                        <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />
+                                    ) : (
+                                        user?.displayName?.charAt(0).toUpperCase() || 'U'
+                                    )}
                                 </div>
                             </button>
 
@@ -416,31 +436,33 @@ const TJPRModal = ({ isOpen, onClose, title, children, maxWidth = '2xl', icon })
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-md animate-in fade-in duration-300">
-            <div className={`w-full ${maxWidths[maxWidth]} max-h-[90vh] overflow-hidden flex flex-col`}>
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-md animate-in fade-in duration-300"
+                onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+            >
+                <div className={`w-full ${maxWidths[maxWidth]} max-h-[90vh] overflow-hidden flex flex-col`}>
                 <div className="tjpr-card flex flex-col h-full tjpr-bg-main">
                     {/* Header Elite */}
-                    <div className="px-6 py-5 border-b tjpr-border-main flex items-center justify-between">
-                        <div className="flex items-center gap-4">
+                    <div className="px-4 md:px-6 py-4 md:py-5 border-b tjpr-border-main flex items-center justify-between">
+                        <div className="flex items-center gap-3 md:gap-4">
                             {icon && (
-                                <div className="w-10 h-10 rounded-xl tjpr-bg-primary-glow flex items-center justify-center">
-                                    <span className="material-symbols-rounded tjpr-text-primary">{icon}</span>
+                                <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl tjpr-bg-primary-glow flex items-center justify-center">
+                                    <span className="material-symbols-rounded tjpr-text-primary text-lg md:text-xl">{icon}</span>
                                 </div>
                             )}
-                            <h3 className="text-xl font-extrabold tjpr-text-main tracking-tight">
+                            <h3 className="text-lg md:text-xl font-extrabold tjpr-text-main tracking-tight">
                                 {title}
                             </h3>
                         </div>
                         <button
                             onClick={onClose}
-                            className="w-10 h-10 rounded-xl hover:tjpr-bg-alt flex items-center justify-center tjpr-text-dim hover:tjpr-text-main transition-all"
+                            className="w-9 h-9 md:w-10 md:h-10 rounded-xl hover:tjpr-bg-alt flex items-center justify-center tjpr-text-dim hover:tjpr-text-main transition-all"
                         >
                             <span className="material-symbols-rounded">close</span>
                         </button>
                     </div>
 
                     {/* Content Scrollable */}
-                    <div className="p-6 overflow-y-auto custom-scrollbar flex-1 tjpr-text-main">
+                    <div className="p-4 md:p-6 overflow-y-auto custom-scrollbar flex-1 tjpr-text-main">
                         {children}
                     </div>
                 </div>
@@ -504,7 +526,7 @@ const NotificationsPanel = ({ notifications, onMarkAsRead, isOpen, onClose, onNo
 /**
  * TJPRToast - Notificação Elite
  */
-const TJPRToast = ({ message, type = 'info', onClose, duration = 5000 }) => {
+const TJPRToast = ({ message, type = 'info', onClose, duration = 3000 }) => {
     useEffect(() => {
         const timer = setTimeout(onClose, duration);
         return () => clearTimeout(timer);

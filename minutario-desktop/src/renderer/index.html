@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Minutário - Desktop</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; overflow: hidden; }
+        #root { height: 100vh; width: 100vw; display: flex; flex-direction: column; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        .custom-scrollbar { scrollbar-width: thin; scrollbar-color: #475569 #1e293b; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useCallback, useRef, createElement: h } = React;
+
+        const CONFIG = {
+            SUPABASE_URL: 'https://ifkhwqfxtdfbotifxfzq.supabase.co',
+            SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlma2h3cWZ4dGRmYm90aWZ4ZnpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5OTc0ODksImV4cCI6MjA5MzU3MzQ4OX0.iN5PKFougk2xfpI_etHzJSJxn4egN6kd-_8dV-sSCwM',
+        };
+
+        const supabaseClient = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
+        }
+
+        const STORAGE_KEY_TEMPLATES = 'minutario_templates';
+        const STORAGE_KEY_FOLDERS = 'minutario_folders';
+
+        function loadFromStorage(key) {
+            try {
+                const data = localStorage.getItem(key);
+                return data ? JSON.parse(data) : [];
+            } catch { return []; }
+        }
+
+        function saveToStorage(key, data) {
+            try { localStorage.setItem(key, JSON.stringify(data)); } catch {}
+        }
+
+        function App() {
+            const [allTemplates, setAllTemplates] = useState(() => loadFromStorage(STORAGE_KEY_TEMPLATES));
+            const [allFolders, setAllFolders] = useState(() => loadFromStorage(STORAGE_KEY_FOLDERS));
+            const [searchQuery, setSearchQuery] = useState('');
+            const [selectedFolder, setSelectedFolder] = useState(null);
+            const [editingTemplateId, setEditingTemplateId] = useState(null);
+            const [isCreatingNew, setIsCreatingNew] = useState(false);
+            const [user, setUser] = useState(null);
+            const [syncStatus, setSyncStatus] = useState('idle');
+            const [showSettings, setShowSettings] = useState(false);
+            const [autoLaunch, setAutoLaunch] = useState(false);
+            const [appVersion, setAppVersion] = useState('1.0.0');
+            const [showInstallerModal, setShowInstallerModal] = useState(false);
+            const [downloadingInstaller, setDownloadingInstaller] = useState(false);
+            const [showExtModal, setShowExtModal] = useState(false);
+            const [updateInfo, setUpdateInfo] = useState(null);
+            const [hookActive, setHookActive] = useState(null);
+
+            useEffect(() => {
+                saveToStorage(STORAGE_KEY_TEMPLATES, allTemplates);
+                if (window.MinutarioDesktop) {
+                    window.MinutarioDesktop.updateTemplatesCache(allTemplates);
+                }
+            }, [allTemplates]);
+
+            useEffect(() => {
+                saveToStorage(STORAGE_KEY_FOLDERS, allFolders);
+            }, [allFolders]);
+
+            useEffect(() => {
+                supabaseClient.auth.getSession().then(({ data: { session } }) => {
+                    if (session?.user) setUser(session.user);
+                });
+
+                const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((event, session) => {
+                    setUser(session?.user || null);
+                });
+
+                if (window.MinutarioDesktop) {
+                    window.MinutarioDesktop.getAppVersion();
+                    window.MinutarioDesktop.onAppVersion((v) => setAppVersion(v));
+                    window.MinutarioDesktop.getAutoLaunch();
+                    window.MinutarioDesktop.onAutoLaunchStatus((v) => setAutoLaunch(v));
+                    window.MinutarioDesktop.onUpdateStatus((status) => {
+                        if (status.channel === 'available') setUpdateInfo(status.data);
+                        else if (status.channel === 'not-available' && !updateInfo) {
+                            // silent
+                        }
+                    });
+                    window.MinutarioDesktop.onShortcutExpanded((data) => {
+                        showToast(`"${data.templateName}" expandido!`, 'success');
+                    });
+                    window.MinutarioDesktop.onTriggerSync(() => {
+                        handleSync();
+                    });
+                    window.MinutarioDesktop.onHookStatus((status) => {
+                        setHookActive(status.active);
+                    });
+                }
+
+                return () => subscription?.unsubscribe();
+            }, []);
+
+            const currentTemplate = allTemplates.find(t => t.id === editingTemplateId) || null;
+            const filteredTemplates = allTemplates.filter(t => {
+                const matchesSearch = !searchQuery ||
+                    t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    (t.shortcut || '').toLowerCase().includes(searchQuery.toLowerCase());
+                const matchesFolder = !selectedFolder || t.folder_id === selectedFolder;
+                return matchesSearch && matchesFolder;
+            });
+            const sortedTemplates = [...filteredTemplates].sort((a, b) =>
+                (a.name || '').localeCompare(b.name || '')
+            );
+
+            const getFolderName = (folderId) => {
+                const f = allFolders.find(f => f.id === folderId);
+                return f ? f.name : 'Sem pasta';
+            };
+
+            function showToast(message, type = 'info') {
+                if (window.showToast) {
+                    window.showToast(message, type);
+                } else {
+                    alert(message);
+                }
+            }
+
+            async function handleLogin(email, password) {
+                try {
+                    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                    if (error) throw error;
+                    showToast('Login realizado!', 'success');
+                    handleSync();
+                } catch (err) {
+                    showToast(err.message, 'error');
+                }
+            }
+
+            async function handleLogout() {
+                await supabaseClient.auth.signOut();
+                setUser(null);
+                showToast('Desconectado', 'info');
+            }
+
+            async function handleSync() {
+                if (!user) { showToast('Faça login para sincronizar', 'warning'); return; }
+                setSyncStatus('syncing');
+                try {
+                    const { data: templates, error: tErr } = await supabaseClient
+                        .from('minutario_templates').select('*').eq('user_id', user.id);
+                    const { data: folders, error: fErr } = await supabaseClient
+                        .from('minutario_folders').select('*').eq('user_id', user.id);
+
+                    if (tErr || fErr) throw tErr || fErr;
+
+                    const mergedT = mergeById(allTemplates, templates || []);
+                    const mergedF = mergeById(allFolders, folders || []);
+
+                    setAllTemplates(mergedT);
+                    setAllFolders(mergedF);
+                    setSyncStatus('updated');
+                    showToast('Sincronizado com sucesso!', 'success');
+                } catch (err) {
+                    setSyncStatus('offline');
+                    showToast('Erro ao sincronizar: ' + err.message, 'error');
+                }
+            }
+
+            function mergeById(local, remote) {
+                const map = {};
+                local.forEach(item => { map[item.id] = item; });
+                remote.forEach(item => {
+                    if (!map[item.id]) map[item.id] = item;
+                    else {
+                        const l = new Date(map[item.id].updated_at || 0).getTime();
+                        const r = new Date(item.updated_at || 0).getTime();
+                        if (r >= l) map[item.id] = item;
+                    }
+                });
+                return Object.values(map);
+            }
+
+            async function handleSave(template) {
+                const exists = allTemplates.find(t => t.id === template.id);
+                let updated;
+
+                if (exists) {
+                    updated = allTemplates.map(t => t.id === template.id ? { ...t, ...template, updated_at: new Date().toISOString() } : t);
+                } else {
+                    updated = [...allTemplates, { ...template, id: generateId(), created_at: new Date().toISOString(), updated_at: new Date().toISOString() }];
+                }
+
+                setAllTemplates(updated);
+                setEditingTemplateId(null);
+                setIsCreatingNew(false);
+
+                if (user) {
+                    try {
+                        const payload = {
+                            id: template.id || updated.find(t => t.name === template.name)?.id,
+                            user_id: user.id,
+                            name: template.name,
+                            shortcut: template.shortcut,
+                            content: template.content || '',
+                            plain_text: template.plain_text || '',
+                            folder_id: template.folder_id || null,
+                        };
+                        if (exists) {
+                            await supabaseClient.from('minutario_templates').update(payload).eq('id', payload.id);
+                        } else {
+                            await supabaseClient.from('minutario_templates').insert(payload);
+                        }
+                    } catch (err) {
+                        console.error('Failed to save to remote:', err);
+                    }
+                }
+            }
+
+            async function handleDelete(id) {
+                setAllTemplates(allTemplates.filter(t => t.id !== id));
+                if (editingTemplateId === id) setEditingTemplateId(null);
+                if (user) {
+                    try { await supabaseClient.from('minutario_templates').delete().eq('id', id); }
+                    catch (err) { console.error('Failed to delete remote:', err); }
+                }
+            }
+
+            async function handleSaveFolder(folder) {
+                const exists = allFolders.find(f => f.id === folder.id);
+                let updated;
+                if (exists) {
+                    updated = allFolders.map(f => f.id === folder.id ? { ...f, ...folder } : f);
+                } else {
+                    updated = [...allFolders, { ...folder, id: generateId() }];
+                }
+                setAllFolders(updated);
+                if (user) {
+                    try { await supabaseClient.from('minutario_folders').insert({ id: updated.find(f => f.name === folder.name)?.id, user_id: user.id, name: folder.name }); }
+                    catch (err) { console.error('Failed to save folder:', err); }
+                }
+            }
+
+            async function handleDeleteFolder(id) {
+                setAllFolders(allFolders.filter(f => f.id !== id));
+                setAllTemplates(allTemplates.map(t => t.folder_id === id ? { ...t, folder_id: null } : t));
+                if (user) {
+                    try { await supabaseClient.from('minutario_folders').delete().eq('id', id); }
+                    catch (err) { console.error('Failed to delete folder:', err); }
+                }
+            }
+
+            async function handleCopyTemplate(template) {
+                const text = template.plain_text || template.content?.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim() || '';
+                try {
+                    await navigator.clipboard.writeText(text);
+                    showToast(`"${template.name}" copiado!`, 'success');
+                } catch {
+                    showToast('Erro ao copiar', 'error');
+                }
+            }
+
+            async function handleExportJson() {
+                const data = JSON.stringify({ templates: allTemplates, folders: allFolders }, null, 2);
+                if (window.MinutarioDesktop) {
+                    const result = await window.MinutarioDesktop.showSaveDialog({
+                        title: 'Exportar Minutário',
+                        defaultPath: 'minutario-backup.json',
+                        filters: [{ name: 'JSON', extensions: ['json'] }],
+                    });
+                    if (!result.canceled && result.filePath) {
+                        // In renderer we write via blob
+                        const blob = new Blob([data], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url; a.download = 'minutario-backup.json';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    }
+                } else {
+                    const blob = new Blob([data], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = 'minutario-backup.json';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }
+                showToast('Exportado!', 'success');
+            }
+
+            async function handleDownloadInstaller() {
+                setDownloadingInstaller(true);
+                try {
+                    const platform = window.MinutarioDesktop?.platform || 'win32';
+                    const fileName = {
+                        win32: 'Minutario-Setup-latest.exe',
+                        darwin: 'Minutario-latest.dmg',
+                        linux: 'Minutario-latest.AppImage',
+                    }[platform] || 'Minutario-Setup-latest.exe';
+
+                    const { data, error } = await supabaseClient
+                        .storage.from('minutario-installers')
+                        .createSignedUrl(fileName, 3600);
+
+                    if (error) throw error;
+
+                    const a = document.createElement('a');
+                    a.href = data.signedUrl;
+                    a.download = fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    showToast('Download iniciado!', 'success');
+                } catch (err) {
+                    showToast('Erro ao baixar instalador: ' + err.message, 'error');
+                } finally {
+                    setDownloadingInstaller(false);
+                }
+            }
+
+            return h('div', { className: 'flex h-full' },
+                h(Sidebar, {
+                    allFolders, selectedFolder, onSelectFolder: setSelectedFolder,
+                    allTemplates, searchQuery, onSearch: setSearchQuery,
+                    user, onLogin: handleLogin, onLogout: handleLogout,
+                    syncStatus, onSync: handleSync,
+                    showSettings, onToggleSettings: () => setShowSettings(!showSettings),
+                    autoLaunch, setAutoLaunch: (v) => {
+                        setAutoLaunch(v);
+                        if (window.MinutarioDesktop) window.MinutarioDesktop.setAutoLaunch(v);
+                    },
+                    appVersion, hookActive,
+                    onDownloadInstaller: () => setShowInstallerModal(true),
+                    onDownloadExt: () => setShowExtModal(true),
+                    onExport: handleExportJson,
+                    onCreateNew: () => { setIsCreatingNew(true); setEditingTemplateId('__new__'); },
+                    onCreateFolder: handleSaveFolder,
+                    onDeleteFolder: handleDeleteFolder,
+                }),
+                h(MainPanel, {
+                    templates: sortedTemplates, folders: allFolders,
+                    editingTemplateId, isCreatingNew,
+                    onSelect: (id) => { setEditingTemplateId(id); setIsCreatingNew(false); },
+                    onSave: handleSave, onDelete: handleDelete,
+                    onCopy: handleCopyTemplate,
+                    onCancel: () => { setEditingTemplateId(null); setIsCreatingNew(false); },
+                    currentTemplate, getFolderName,
+                    onSaveFolder: handleSaveFolder, onDeleteFolder: handleDeleteFolder,
+                }),
+                showInstallerModal && h(InstallerModal, {
+                    onClose: () => setShowInstallerModal(false),
+                    onDownload: handleDownloadInstaller,
+                    downloading: downloadingInstaller,
+                }),
+                showExtModal && h(ExtensionModal, {
+                    onClose: () => setShowExtModal(false),
+                }),
+            );
+        }
+
+        function Sidebar({
+            allFolders, selectedFolder, onSelectFolder,
+            allTemplates, searchQuery, onSearch,
+            user, onLogin, onLogout, syncStatus, onSync,
+            showSettings, onToggleSettings, autoLaunch, setAutoLaunch,
+            appVersion, hookActive, onDownloadInstaller, onDownloadExt, onExport, onCreateNew,
+            onCreateFolder, onDeleteFolder,
+        }) {
+            const [showLoginForm, setShowLoginForm] = useState(false);
+            const [loginEmail, setLoginEmail] = useState('');
+            const [loginPassword, setLoginPassword] = useState('');
+            const [newFolderName, setNewFolderName] = useState('');
+
+            const allTemplatesCount = allTemplates.length;
+            const folderCounts = {};
+            allFolders.forEach(f => { folderCounts[f.id] = allTemplates.filter(t => t.folder_id === f.id).length; });
+            const uncategorizedCount = allTemplates.filter(t => !t.folder_id).length;
+
+            return h('div', { className: 'w-52 lg:w-60 xl:w-72 flex-shrink-0 bg-slate-800/50 border-r border-slate-700/50 flex flex-col h-full' },
+                /* Header */
+                h('div', { className: 'p-4 border-b border-slate-700/50' },
+                    h('div', { className: 'flex items-center gap-3' },
+                        h('div', { className: 'w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center' },
+                            h('span', { className: 'material-symbols-rounded text-white text-sm' }, 'article'),
+                        ),
+                        h('div', null,
+                            h('div', { className: 'text-sm font-bold text-white' }, 'Minutário'),
+                            h('div', { className: 'text-[10px] tjpr-text-dim flex items-center gap-1.5' },
+                                'Desktop v' + appVersion,
+                                hookActive === true
+                                    ? h('span', { className: 'w-1.5 h-1.5 rounded-full bg-emerald-500', title: 'Gatilho ativo' })
+                                    : hookActive === false
+                                        ? h('span', { className: 'w-1.5 h-1.5 rounded-full bg-red-500', title: 'Gatilho inativo' })
+                                        : null
+                            ),
+                        ),
+                    ),
+                ),
+                /* User area */
+                h('div', { className: 'px-4 py-3 border-b border-slate-700/50' },
+                    user
+                        ? h('div', { className: 'flex items-center justify-between' },
+                            h('div', { className: 'flex items-center gap-2' },
+                                h('div', { className: 'w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs font-bold' },
+                                    user.email?.[0]?.toUpperCase() || '?',
+                                ),
+                                h('span', { className: 'text-xs text-slate-300 truncate max-w-[120px]' }, user.email),
+                            ),
+                            h('button', {
+                                onClick: onLogout,
+                                className: 'text-xs text-slate-500 hover:text-red-400 transition-colors',
+                            }, 'Sair'),
+                        )
+                        : h('div', null,
+                            showLoginForm
+                                ? h('div', { className: 'space-y-2' },
+                                    h('input', {
+                                        type: 'email', placeholder: 'Email',
+                                        value: loginEmail,
+                                        onChange: e => setLoginEmail(e.target.value),
+                                        className: 'w-full px-3 py-1.5 text-xs rounded-lg bg-slate-700 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500',
+                                    }),
+                                    h('input', {
+                                        type: 'password', placeholder: 'Senha',
+                                        value: loginPassword,
+                                        onChange: e => setLoginPassword(e.target.value),
+                                        className: 'w-full px-3 py-1.5 text-xs rounded-lg bg-slate-700 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500',
+                                    }),
+                                    h('div', { className: 'flex gap-2' },
+                                        h('button', {
+                                            onClick: () => onLogin(loginEmail, loginPassword),
+                                            className: 'flex-1 px-3 py-1.5 text-xs font-bold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors',
+                                        }, 'Entrar'),
+                                        h('button', {
+                                            onClick: () => setShowLoginForm(false),
+                                            className: 'px-3 py-1.5 text-xs text-slate-400 hover:text-white',
+                                        }, 'Cancelar'),
+                                    ),
+                                )
+                                : h('button', {
+                                    onClick: () => setShowLoginForm(true),
+                                    className: 'w-full px-3 py-2 text-xs font-medium rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors text-center',
+                                }, 'Fazer login para sincronizar'),
+                        ),
+                ),
+                /* Search */
+                h('div', { className: 'px-4 py-3' },
+                    h('div', { className: 'relative' },
+                        h('span', { className: 'material-symbols-rounded absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm' }, 'search'),
+                        h('input', {
+                            type: 'text', placeholder: 'Buscar modelos...',
+                            value: searchQuery,
+                            onChange: e => onSearch(e.target.value),
+                            className: 'w-full pl-8 pr-3 py-2 text-xs rounded-lg bg-slate-700/50 border border-slate-600/50 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors',
+                        }),
+                    ),
+                ),
+                /* Folders */
+                h('div', { className: 'flex-1 overflow-y-auto custom-scrollbar px-2' },
+                    h('button', {
+                        onClick: () => onSelectFolder(null),
+                        className: `w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors mb-0.5 ${!selectedFolder ? 'bg-indigo-500/10 text-indigo-400' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'}`,
+                    },
+                        h('div', { className: 'flex items-center gap-2' },
+                            h('span', { className: 'material-symbols-rounded text-sm' }, 'inbox'),
+                            h('span', null, 'Todos os modelos'),
+                        ),
+                        h('span', { className: 'text-[10px] opacity-60' }, allTemplates.length),
+                    ),
+                    allFolders.map(folder =>
+                        h('div', {
+                            key: folder.id,
+                            className: `group flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors mb-0.5 cursor-pointer ${selectedFolder === folder.id ? 'bg-indigo-500/10 text-indigo-400' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'}`,
+                            onClick: () => onSelectFolder(folder.id),
+                        },
+                            h('div', { className: 'flex items-center gap-2' },
+                                h('span', { className: 'material-symbols-rounded text-sm' }, 'folder'),
+                                h('span', null, folder.name),
+                            ),
+                            h('div', { className: 'flex items-center gap-1' },
+                                h('span', { className: 'text-[10px] opacity-60' }, folderCounts[folder.id] || 0),
+                                h('button', {
+                                    onClick: (e) => { e.stopPropagation(); if (confirm('Excluir pasta?')) { onDeleteFolder(folder.id); } },
+                                    className: 'opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-all',
+                                },
+                                    h('span', { className: 'material-symbols-rounded text-[14px]' }, 'close'),
+                                ),
+                            ),
+                        ),
+                    ),
+                    /* New folder */
+                    h('div', { className: 'mt-2' },
+                        newFolderName
+                            ? h('div', { className: 'flex gap-1' },
+                                h('input', {
+                                    type: 'text', placeholder: 'Nome da pasta', autoFocus: true,
+                                    value: newFolderName,
+                                    onChange: e => setNewFolderName(e.target.value),
+                                    onKeyDown: e => {
+                                        if (e.key === 'Enter' && newFolderName.trim()) {
+                                            onCreateFolder({ name: newFolderName.trim() });
+                                            setNewFolderName('');
+                                        }
+                                        if (e.key === 'Escape') setNewFolderName('');
+                                    },
+                                    className: 'flex-1 px-2 py-1.5 text-xs rounded bg-slate-700 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500',
+                                }),
+                                h('button', {
+                                    onClick: () => setNewFolderName(''),
+                                    className: 'px-2 py-1.5 text-xs text-slate-400 hover:text-white',
+                                }, 'Cancelar'),
+                            )
+                            : h('button', {
+                                onClick: () => { setNewFolderName(' '); setTimeout(() => setNewFolderName(''), 0); },
+                                className: 'w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-500 hover:text-slate-300 hover:bg-slate-700/30 rounded-lg transition-colors',
+                            },
+                                h('span', { className: 'material-symbols-rounded text-sm' }, 'add'),
+                                'Nova pasta',
+                            ),
+                    ),
+                ),
+                /* Bottom actions */
+                h('div', { className: 'border-t border-slate-700/50 p-3 space-y-2' },
+                    h('button', {
+                        onClick: onCreateNew,
+                        className: 'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors shadow-lg',
+                    },
+                        h('span', { className: 'material-symbols-rounded text-sm' }, 'add'),
+                        'Novo Modelo',
+                    ),
+                    h('div', { className: 'flex gap-2' },
+                        h('button', {
+                            onClick: onDownloadInstaller,
+                            className: 'flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-[10px] font-medium transition-colors',
+                        },
+                            h('span', { className: 'material-symbols-rounded text-xs' }, 'download'),
+                            'App Desktop',
+                        ),
+                        h('button', {
+                            onClick: onDownloadExt,
+                            className: 'flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-[10px] font-medium transition-colors',
+                        },
+                            h('span', { className: 'material-symbols-rounded text-xs' }, 'extension'),
+                            'Extensão',
+                        ),
+                    ),
+                    h('div', { className: 'flex gap-2' },
+                        h('button', {
+                            onClick: onSync,
+                            disabled: syncStatus === 'syncing',
+                            className: `flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-medium transition-colors ${syncStatus === 'syncing' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-slate-700 hover:bg-slate-600 text-slate-300'}`,
+                        },
+                            h('span', { className: `material-symbols-rounded text-xs ${syncStatus === 'syncing' ? 'animate-spin' : ''}` },
+                                syncStatus === 'syncing' ? 'sync' : 'sync',
+                            ),
+                            syncStatus === 'syncing' ? 'Sincronizando...' : 'Sincronizar',
+                        ),
+                        h('button', {
+                            onClick: onExport,
+                            className: 'flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-[10px] font-medium transition-colors',
+                        },
+                            h('span', { className: 'material-symbols-rounded text-xs' }, 'file_download'),
+                        ),
+                    ),
+                ),
+            );
+        }
+
+        function MainPanel({
+            templates, folders, editingTemplateId, isCreatingNew,
+            onSelect, onSave, onDelete, onCopy, onCancel,
+            currentTemplate, getFolderName,
+            onSaveFolder, onDeleteFolder,
+        }) {
+            if (editingTemplateId === '__new__' || (editingTemplateId && currentTemplate)) {
+                return h(EditorPanel, {
+                    template: currentTemplate || {},
+                    isNew: isCreatingNew || editingTemplateId === '__new__',
+                    folders,
+                    onSave, onDelete, onCancel,
+                    onSaveFolder,
+                });
+            }
+
+            return h('div', { className: 'flex-1 flex flex-col overflow-hidden' },
+                h('div', { className: 'flex-1 overflow-y-auto custom-scrollbar p-3 md:p-4 xl:p-6' },
+                    templates.length === 0
+                        ? h(EmptyState, { onNew: () => onSelect('__new__') })
+                        : h('div', { className: 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3' },
+                            templates.map(template =>
+                                h(TemplateCard, {
+                                    key: template.id,
+                                    template,
+                                    folderName: getFolderName(template.folder_id),
+                                    onSelect: () => onSelect(template.id),
+                                    onCopy: () => onCopy(template),
+                                    onDelete: () => {
+                                        if (confirm(`Excluir "${template.name}"?`)) onDelete(template.id);
+                                    },
+                                }),
+                            ),
+                        ),
+                ),
+            );
+        }
+
+        function EmptyState({ onNew }) {
+            return h('div', { className: 'h-full flex flex-col items-center justify-center text-center p-4 md:p-8' },
+                h('div', { className: 'w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-4' },
+                    h('span', { className: 'material-symbols-rounded text-3xl text-indigo-400' }, 'article'),
+                ),
+                h('h2', { className: 'text-lg font-bold text-white mb-2' }, 'Nenhum modelo ainda'),
+                h('p', { className: 'text-sm text-slate-400 mb-6 max-w-sm' },
+                    'Crie seu primeiro modelo de texto para começar. Use atalhos como /sig para expandir textos em qualquer lugar do sistema.',
+                ),
+                h('button', {
+                    onClick: onNew,
+                    className: 'flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-colors shadow-lg',
+                },
+                    h('span', { className: 'material-symbols-rounded text-sm' }, 'add'),
+                    'Criar Modelo',
+                ),
+                h('div', { className: 'mt-8 p-4 rounded-xl bg-slate-800/50 border border-slate-700/50 max-w-sm' },
+                    h('div', { className: 'flex items-start gap-3' },
+                        h('span', { className: 'material-symbols-rounded text-amber-400 text-sm flex-shrink-0' }, 'lightbulb'),
+                        h('div', { className: 'text-xs text-slate-400 text-left leading-relaxed' },
+                            h('p', null, 'Digite ', h('code', { className: 'px-1 py-0.5 rounded bg-slate-700 text-slate-200 text-[10px]' }, '/'), '+ atalho + ', h('code', { className: 'px-1 py-0.5 rounded bg-slate-700 text-slate-200 text-[10px]' }, 'Espaço'), ' para expandir em qualquer aplicativo.'),
+                            h('p', { className: 'mt-1' }, 'Pressione ', h('code', { className: 'px-1 py-0.5 rounded bg-slate-700 text-slate-200 text-[10px]' }, 'Ctrl+Shift+K'), ' para abrir o acesso rápido.'),
+                        ),
+                    ),
+                ),
+            );
+        }
+
+        function TemplateCard({ template, folderName, onSelect, onCopy, onDelete }) {
+            const preview = (template.plain_text || template.content || '')
+                .replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim().substring(0, 120);
+
+            return h('div', {
+                onClick: onSelect,
+                className: 'group bg-slate-800/80 hover:bg-slate-800 border border-slate-700/50 hover:border-indigo-500/30 rounded-xl p-4 cursor-pointer transition-all',
+            },
+                h('div', { className: 'flex items-start justify-between mb-2' },
+                    h('div', { className: 'flex items-center gap-2 min-w-0' },
+                        h('div', { className: 'w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center flex-shrink-0' },
+                            h('span', { className: 'material-symbols-rounded text-sm text-indigo-400' }, 'description'),
+                        ),
+                        h('div', { className: 'min-w-0' },
+                            h('div', { className: 'text-sm font-semibold text-white truncate' }, template.name),
+                            template.shortcut && h('div', { className: 'text-[10px] text-indigo-400 font-mono mt-0.5' }, '/' + template.shortcut),
+                        ),
+                    ),
+                    h('div', { className: 'flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0' },
+                        h('button', {
+                            onClick: (e) => { e.stopPropagation(); onCopy(); },
+                            className: 'w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 flex items-center justify-center transition-colors',
+                            title: 'Copiar',
+                        },
+                            h('span', { className: 'material-symbols-rounded text-xs text-slate-400' }, 'content_copy'),
+                        ),
+                        h('button', {
+                            onClick: (e) => { e.stopPropagation(); onDelete(); },
+                            className: 'w-6 h-6 rounded bg-slate-700 hover:bg-red-500/20 flex items-center justify-center transition-colors',
+                            title: 'Excluir',
+                        },
+                            h('span', { className: 'material-symbols-rounded text-xs text-slate-400' }, 'delete'),
+                        ),
+                    ),
+                ),
+                preview && h('div', { className: 'text-[11px] text-slate-500 leading-relaxed line-clamp-2' }, preview),
+                folderName && h('div', { className: 'mt-2 flex items-center gap-1' },
+                    h('span', { className: 'material-symbols-rounded text-[10px] text-slate-600' }, 'folder'),
+                    h('span', { className: 'text-[10px] text-slate-600' }, folderName),
+                ),
+            );
+        }
+
+        function EditorPanel({ template, isNew, folders, onSave, onDelete, onCancel, onSaveFolder }) {
+            const [name, setName] = useState(template.name || '');
+            const [shortcut, setShortcut] = useState(template.shortcut || '');
+            const [content, setContent] = useState(template.content || '');
+            const [plainText, setPlainText] = useState(template.plain_text || '');
+            const [folderId, setFolderId] = useState(template.folder_id || '');
+            const [useRichEditor, setUseRichEditor] = useState(false);
+            const [showFolderInput, setShowFolderInput] = useState(false);
+            const [newFolderName, setNewFolderName] = useState('');
+
+            useEffect(() => {
+                setName(template.name || '');
+                setShortcut(template.shortcut || '');
+                setContent(template.content || '');
+                setPlainText(template.plain_text || '');
+                setFolderId(template.folder_id || '');
+            }, [template.id]);
+
+            function handleSave() {
+                if (!name.trim()) { alert('Nome é obrigatório'); return; }
+                if (!shortcut.trim()) { alert('Atalho é obrigatório'); return; }
+                onSave({
+                    id: template.id,
+                    name: name.trim(),
+                    shortcut: shortcut.trim().toLowerCase(),
+                    content: useRichEditor ? content : '',
+                    plain_text: useRichEditor ? plainText : plainText || content?.replace(/<[^>]*>/g, '') || '',
+                    html_content: useRichEditor ? content : '',
+                    folder_id: folderId || null,
+                });
+            }
+
+            return h('div', { className: 'flex-1 flex flex-col overflow-hidden' },
+                /* Toolbar */
+                h('div', { className: 'flex items-center justify-between px-3 md:px-6 py-2.5 md:py-3 border-b border-slate-700/50 bg-slate-800/30' },
+                    h('div', { className: 'flex items-center gap-3' },
+                        h('button', {
+                            onClick: onCancel,
+                            className: 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-slate-700 transition-colors',
+                        },
+                            h('span', { className: 'material-symbols-rounded text-sm' }, 'arrow_back'),
+                            'Voltar',
+                        ),
+                        h('div', { className: 'h-4 w-px bg-slate-700' }),
+                        h('span', { className: 'text-sm font-bold text-white' }, isNew ? 'Novo Modelo' : 'Editar Modelo'),
+                    ),
+                    h('div', { className: 'flex items-center gap-2' },
+                        h('button', {
+                            onClick: () => setUseRichEditor(!useRichEditor),
+                            className: `px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${useRichEditor ? 'bg-indigo-500/10 text-indigo-400' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`,
+                        },
+                            useRichEditor ? 'Editor Simples' : 'Editor Rico',
+                        ),
+                        !isNew && h('button', {
+                            onClick: () => { if (confirm('Excluir modelo?')) onDelete(template.id); },
+                            className: 'px-3 py-1.5 rounded-lg text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors',
+                        },
+                            h('span', { className: 'material-symbols-rounded text-sm' }, 'delete'),
+                        ),
+                        h('button', {
+                            onClick: handleSave,
+                            className: 'px-5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors',
+                        }, 'Salvar'),
+                    ),
+                ),
+                /* Form */
+                h('div', { className: 'flex-1 overflow-y-auto custom-scrollbar p-4 md:p-5 xl:p-6 space-y-4 xl:space-y-5' },
+                    /* Name */
+                    h('div', null,
+                        h('label', { className: 'block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5' }, 'Nome'),
+                        h('input', {
+                            type: 'text', placeholder: 'Ex: Assinatura de Email',
+                            value: name,
+                            onChange: e => setName(e.target.value),
+                            className: 'w-full px-4 py-2.5 text-sm rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors',
+                            autoFocus: true,
+                        }),
+                    ),
+                    /* Shortcut */
+                    h('div', null,
+                        h('label', { className: 'block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5' }, 'Atalho'),
+                        h('div', { className: 'relative' },
+                            h('span', { className: 'absolute left-4 top-1/2 -translate-y-1/2 text-indigo-400 font-mono font-bold text-sm' }, '/'),
+                            h('input', {
+                                type: 'text', placeholder: 'sig',
+                                value: shortcut,
+                                onChange: e => setShortcut(e.target.value.replace(/[^a-zA-Z0-9-]/g, '')),
+                                className: 'w-full pl-8 pr-4 py-2.5 text-sm rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-mono transition-colors',
+                            }),
+                        ),
+                        h('p', { className: 'text-[10px] text-slate-500 mt-1' }, 'Digite / + atalho + Espaço para expandir em qualquer aplicativo.'),
+                    ),
+                    /* Folder */
+                    h('div', null,
+                        h('label', { className: 'block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5' }, 'Pasta'),
+                        h('div', { className: 'flex gap-2' },
+                            h('select', {
+                                value: folderId,
+                                onChange: e => setFolderId(e.target.value),
+                                className: 'flex-1 px-4 py-2.5 text-sm rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-indigo-500 transition-colors',
+                            },
+                                h('option', { value: '' }, 'Sem pasta'),
+                                folders.map(f => h('option', { key: f.id, value: f.id }, f.name)),
+                            ),
+                            h('button', {
+                                onClick: () => setShowFolderInput(!showFolderInput),
+                                className: 'px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:border-indigo-500 transition-colors',
+                            },
+                                h('span', { className: 'material-symbols-rounded text-sm' }, 'add'),
+                            ),
+                        ),
+                        showFolderInput && h('div', { className: 'flex gap-2 mt-2' },
+                            h('input', {
+                                type: 'text', placeholder: 'Nome da nova pasta',
+                                value: newFolderName,
+                                onChange: e => setNewFolderName(e.target.value),
+                                onKeyDown: e => {
+                                    if (e.key === 'Enter' && newFolderName.trim()) {
+                                        onSaveFolder({ name: newFolderName.trim() });
+                                        setNewFolderName('');
+                                        setShowFolderInput(false);
+                                    }
+                                    if (e.key === 'Escape') setShowFolderInput(false);
+                                },
+                                className: 'flex-1 px-3 py-1.5 text-xs rounded-lg bg-slate-700 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500',
+                                autoFocus: true,
+                            }),
+                            h('button', {
+                                onClick: () => setShowFolderInput(false),
+                                className: 'px-3 py-1.5 text-xs text-slate-400 hover:text-white',
+                            }, 'Cancelar'),
+                        ),
+                    ),
+                    /* Content */
+                    h('div', { className: 'flex-1' },
+                        h('label', { className: 'block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5' }, 'Conteúdo'),
+                        useRichEditor
+                            ? h('div', null,
+                                h('textarea', {
+                                    placeholder: '<p>Olá, meu nome é...</p>',
+                                    value: content,
+                                    onChange: e => setContent(e.target.value),
+                                    className: 'w-full h-48 md:h-64 px-4 py-3 text-sm rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-mono transition-colors resize-none',
+                                }),
+                            )
+                            : h('div', null,
+                                h('textarea', {
+                                    placeholder: 'Digite o texto que será expandido...',
+                                    value: plainText,
+                                    onChange: e => setPlainText(e.target.value),
+                                    className: 'w-full h-48 md:h-64 px-4 py-3 text-sm rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors resize-none',
+                                }),
+                                h('p', { className: 'text-[10px] text-slate-500 mt-1' },
+                                    'Dica: Use HTML no "Editor Rico" para formatação avançada.',
+                                ),
+                            ),
+                    ),
+                ),
+            );
+        }
+
+        function InstallerModal({ onClose, onDownload, downloading }) {
+            const platform = window.MinutarioDesktop?.platform || 'win32';
+            const fileNames = {
+                win32: 'Minutario-Portable-latest.exe',
+                darwin: 'Minutario.dmg',
+                linux: 'Minutario.AppImage',
+            };
+            const fileName = fileNames[platform] || fileNames.win32;
+
+            useEffect(() => {
+                function handleMouseDown(e) {
+                    const card = document.getElementById('installer-modal-card');
+                    if (card && !card.contains(e.target)) onClose();
+                }
+                document.addEventListener('mousedown', handleMouseDown);
+                return () => document.removeEventListener('mousedown', handleMouseDown);
+            }, [onClose]);
+
+            return h('div', { className: 'fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4' },
+                h('div', { id: 'installer-modal-card', className: 'bg-slate-800 border border-slate-700 rounded-2xl max-w-lg w-full p-4 md:p-6 shadow-2xl max-h-[90vh] overflow-y-auto' },
+                    h('div', { className: 'flex items-center justify-between mb-6' },
+                        h('div', { className: 'flex items-center gap-3' },
+                            h('div', { className: 'w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center' },
+                                h('span', { className: 'material-symbols-rounded text-indigo-400' }, 'download'),
+                            ),
+                            h('div', null,
+                                h('h2', { className: 'text-lg font-bold text-white' }, 'Instalar App Desktop'),
+                                h('p', { className: 'text-xs text-slate-400' }, 'Funciona em todo o sistema'),
+                            ),
+                        ),
+                        h('button', {
+                            onClick: onClose,
+                            className: 'w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 flex items-center justify-center text-slate-400 hover:text-white transition-colors',
+                        },
+                            h('span', { className: 'material-symbols-rounded text-sm' }, 'close'),
+                        ),
+                    ),
+                    h('div', { className: 'space-y-4' },
+                        h('div', { className: 'flex items-start gap-3 p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/10' },
+                            h('span', { className: 'material-symbols-rounded text-indigo-400 flex-shrink-0' }, 'info'),
+                            h('div', { className: 'text-xs text-slate-300 leading-relaxed' },
+                                'O App Desktop do Minutário funciona em ', h('b', null, 'qualquer aplicativo'), ': Word, Outlook, navegadores, editores de texto e muito mais. ',
+                                'Digite ', h('code', { className: 'px-1 py-0.5 rounded bg-slate-700 text-indigo-400 text-[10px]' }, '/'), '+ atalho + ', h('code', { className: 'px-1 py-0.5 rounded bg-slate-700 text-indigo-400 text-[10px]' }, 'Espaço'), ' para expandir.',
+                            ),
+                        ),
+                        h('button', {
+                            onClick: onDownload,
+                            disabled: downloading,
+                            className: `w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl font-bold text-sm uppercase tracking-wider text-white transition-all ${
+                                downloading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg hover:shadow-xl'
+                            }`,
+                        },
+                            h('span', { className: `material-symbols-rounded ${downloading ? 'animate-spin' : ''}` },
+                                downloading ? 'sync' : 'download',
+                            ),
+                            downloading ? 'Baixando...' : `Baixar (${fileName})`,
+                        ),
+                        h('div', { className: 'p-4 rounded-xl bg-slate-700/30 border border-slate-600/30' },
+                            h('h4', { className: 'text-xs font-bold text-white uppercase tracking-wider mb-3 flex items-center gap-2' },
+                                h('span', { className: 'material-symbols-rounded text-xs' }, 'settings'),
+                                'Funcionalidades',
+                            ),
+                            [
+                                ['keyboard', 'Expansão global de texto em qualquer app'],
+                                ['sync', 'Sincronização automática com sua conta'],
+                                ['rocket_launch', 'Inicia automaticamente com o Windows'],
+                                ['update', 'Atualização automática'],
+                            ].map(([icon, text]) =>
+                                h('div', { key: icon, className: 'flex items-center gap-2 py-1.5' },
+                                    h('span', { className: 'material-symbols-rounded text-indigo-400 text-xs' }, icon),
+                                    h('span', { className: 'text-xs text-slate-400' }, text),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            );
+        }
+
+        function ExtensionModal({ onClose }) {
+            useEffect(() => {
+                function handleMouseDown(e) {
+                    const card = document.getElementById('extension-modal-card');
+                    if (card && !card.contains(e.target)) onClose();
+                }
+                document.addEventListener('mousedown', handleMouseDown);
+                return () => document.removeEventListener('mousedown', handleMouseDown);
+            }, [onClose]);
+
+            return h('div', { className: 'fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4' },
+                h('div', { id: 'extension-modal-card', className: 'bg-slate-800 border border-slate-700 rounded-2xl max-w-lg w-full p-4 md:p-6 shadow-2xl max-h-[90vh] overflow-y-auto' },
+                    h('div', { className: 'flex items-center justify-between mb-6' },
+                        h('div', { className: 'flex items-center gap-3' },
+                            h('div', { className: 'w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center' },
+                                h('span', { className: 'material-symbols-rounded text-indigo-400' }, 'extension'),
+                            ),
+                            h('div', null,
+                                h('h2', { className: 'text-lg font-bold text-white' }, 'Extensão para Navegador'),
+                                h('p', { className: 'text-xs text-slate-400' }, 'Funciona no Google Chrome'),
+                            ),
+                        ),
+                        h('button', {
+                            onClick: onClose,
+                            className: 'w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 flex items-center justify-center text-slate-400 hover:text-white transition-colors',
+                        },
+                            h('span', { className: 'material-symbols-rounded text-sm' }, 'close'),
+                        ),
+                    ),
+                    h('div', { className: 'space-y-4' },
+                        h('div', { className: 'flex items-start gap-3 p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/10' },
+                            h('span', { className: 'material-symbols-rounded text-indigo-400 flex-shrink-0' }, 'info'),
+                            h('div', { className: 'text-xs text-slate-300 leading-relaxed' },
+                                'A extensão permite expandir modelos com atalhos de texto em qualquer página do navegador.',
+                            ),
+                        ),
+                        h('p', { className: 'text-xs text-slate-400' },
+                            'Acesse o Minutário no navegador para baixar e instalar a extensão.',
+                        ),
+                        h('ol', { className: 'space-y-2 text-xs text-slate-300' },
+                            [
+                                'Abra o Minutário no navegador.',
+                                'Vá na seção "Extensão" e baixe o arquivo ZIP.',
+                                'Extraia em uma pasta e carregue em chrome://extensions.',
+                            ].map((step, i) =>
+                                h('li', { key: i, className: 'flex items-start gap-2' },
+                                    h('span', { className: 'w-5 h-5 rounded-full bg-indigo-500/10 text-indigo-400 flex items-center justify-center text-[10px] font-black flex-shrink-0 mt-0.5' }, i + 1),
+                                    h('span', { className: 'leading-relaxed' }, step),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(h(App));
+    </script>
+</body>
+</html>

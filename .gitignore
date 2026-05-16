@@ -28,6 +28,16 @@ scratch/
 # Node
 node_modules/
 
+# Desktop app build artifacts
+minutario-desktop/dist/
+minutario-desktop/node_modules/
+minutario-desktop/cert/
+
+# Desktop installer copies
+Minutario-Setup-latest.exe
+Minutario-Portable-latest.exe
+*.blockmap
+
 # OS
 .DS_Store
 Thumbs.db

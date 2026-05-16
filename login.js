@@ -153,18 +153,21 @@ const TJPRLoginPage = () => {
 
                 if (signUpError) throw signUpError;
 
-                // O trigger 'on_auth_user_created' no Postgres cuidará de criar o profile.
-                // Mas vamos atualizar o profile com o setor_id e nome se necessário.
+                // Cria o profile com nome, setor e permissões padrão
                 if (signUpData.user) {
                     const { error: profileError } = await window._supabaseClient
                         .from('profiles')
-                        .update({
+                        .upsert({
+                            id: signUpData.user.id,
+                            email: signUpData.user.email,
                             display_name: displayName.trim(),
-                            setor_id: setorIdFinal
-                        })
-                        .eq('id', signUpData.user.id);
+                            setor_id: setorIdFinal,
+                            role: 'basic',
+                            acesso_minutario: false,
+                            acesso_minuta_preparo: false
+                        }, { onConflict: 'id' });
                     
-                    if (profileError) console.error("Erro ao atualizar profile:", profileError);
+                    if (profileError) console.error("Erro ao criar profile:", profileError);
                 }
 
                 // Iniciar a tela de confirmação e o cooldown de 60s
