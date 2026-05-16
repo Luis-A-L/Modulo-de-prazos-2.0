@@ -35,12 +35,14 @@ const BugReportsPage = () => {
             
             const reportsWithUsers = data.map(report => ({
                 ...report,
-                // Adaptação para o resto do componente que usa CamelCase ou nomes específicos
+                // Adaptação para as colunas em português do banco de dados
+                description: report.descricao || report.description || '',
+                title: report.titulo || report.title || 'Sem Título',
                 createdAt: report.created_at,
                 reporterName: report.profiles?.display_name || report.user_name || 'Usuário Desconhecido',
                 reporterEmail: report.profiles?.email || report.user_email || '',
-                reporterAvatar: '#4f46e5', // Padrão ou extraído do perfil se houver
-                screenshotBase64: report.screenshot // Mapeia para o nome esperado no resto do código
+                reporterAvatar: '#4f46e5', 
+                screenshotBase64: report.screenshot 
             }));
 
             setChamados(reportsWithUsers);
@@ -92,8 +94,7 @@ const BugReportsPage = () => {
             const { error: upError } = await _supabase
                 .from('bug_reports')
                 .update({ 
-                    status: newStatus, 
-                    updated_at: new Date().toISOString() 
+                    status: newStatus
                 })
                 .eq('id', chamado.id);
 
@@ -102,6 +103,47 @@ const BugReportsPage = () => {
             setChamadoToStatus(null);
             await fetchChamados();
             window.showToast?.(`Status do chamado atualizado para ${newStatus}.`, "success");
+
+            // Notificar o criador do chamado
+            try {
+                await _supabase
+                    .from('notifications')
+                    .insert({
+                        user_id: chamado.user_id,
+                        title: 'Chamado Resolvido',
+                        message: `Seu chamado "${chamado.description?.substring(0, 60) || chamado.title || 'Sem título'}" foi resolvido.`,
+                        type: 'bug_report_resolved',
+                        read: false,
+                        related_id: chamado.id,
+                        created_at: new Date().toISOString(),
+                        link: '#admin?tab=bugs'
+                    });
+            } catch (notifErr) {
+                console.warn("Falha ao notificar criador do chamado:", notifErr);
+            }
+
+            // Notificar administradores sobre a resolução
+            try {
+                const { data: admins } = await _supabase
+                    .from('profiles')
+                    .select('id')
+                    .in('role', ['admin', 'setor_admin']);
+                if (admins && admins.length > 0) {
+                    const adminNotifs = admins.map(a => ({
+                        user_id: a.id,
+                        title: 'Chamado Resolvido',
+                        message: `O chamado "${chamado.description?.substring(0, 40) || chamado.title || 'Sem título'}" foi resolvido.`,
+                        type: 'bug_report_resolved',
+                        read: false,
+                        related_id: chamado.id,
+                        created_at: new Date().toISOString(),
+                        link: '#admin?tab=bugs'
+                    }));
+                    await _supabase.from('notifications').insert(adminNotifs);
+                }
+            } catch (notifErr) {
+                console.warn("Falha ao notificar administradores:", notifErr);
+            }
             
             if (window.logAudit && window._supabaseAuth?.user) {
                 await window.logAudit(_supabase, window._supabaseAuth.user, 'ALTERAR_STATUS_CHAMADO', `ID: ${chamado.id} para ${newStatus}`);

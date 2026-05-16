@@ -1,5 +1,5 @@
 // Versão do cache - mude este valor para forçar atualização
-const CACHE_NAME = 'prazos-tjpr-v9';
+const CACHE_NAME = 'prazos-tjpr-v14';
 const urlsToCache = [
   './',
   './index.html',

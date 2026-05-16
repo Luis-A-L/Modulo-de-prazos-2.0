@@ -448,8 +448,8 @@ Se não: foi remetido ao MP? Sim/Não. Decorreu o prazo? Sim/Não.
     };
 
     return (
-        <div className="h-full overflow-y-auto custom-scrollbar">
-            <div className="max-w-6xl mx-auto p-6 lg:p-10 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="min-h-full">
+            <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {/* Header */}
                 <div className="flex items-center gap-4 pb-6 border-b border-white/10">
                     <div className="w-14 h-14 bg-indigo-500/10 text-indigo-400 rounded-2xl flex items-center justify-center border border-indigo-500/20">

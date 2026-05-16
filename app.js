@@ -7,7 +7,7 @@ const {
     TJPRModal, NotificationsPanel, CookieConsent, TJPRFormGroup, TJPRSelect,
     MinutasAdminPage, CalendarioAdminPage, BugReportsPage,
     TJPRLoginPage, MinutaPreparoPage, TJPRToastContainer, TJPRConfirmModal,
-    TriagemIAPage
+    TriagemIAPage, BugReportModal
 } = window;
 
 const usePagination = (data, itemsPerPage) => {
@@ -4653,19 +4653,7 @@ const BugReportProvider = ({ children }) => {
             return false;
         }
 
-        let description = '';
-        let extraFields = {};
-
-        if (typeof payload === 'string') {
-            description = payload;
-        } else {
-            description = payload.description;
-            extraFields = {
-                dataDisponibilizacao: payload.dataDisponibilizacao,
-                isCrime: payload.isCrime,
-                prazo: payload.prazo
-            };
-        }
+        let description = typeof payload === 'string' ? payload : payload.description;
 
         try {
             console.log("BugReportProvider: Iniciando submissão do relatório...");
@@ -4675,16 +4663,26 @@ const BugReportProvider = ({ children }) => {
                 throw new Error("Você precisa estar logado para enviar um relatório.");
             }
 
+            // Formatar descrição para incluir campos extras caso não existam colunas no DB
+            const formattedDescription = `[DADOS DO CÁLCULO]
+Data: ${payload.dataDisponibilizacao || 'Não informada'}
+Prazo: ${payload.prazo || '15'} dias
+Criminal: ${payload.isCrime ? 'Sim' : 'Não'}
+-----------------------------------------
+${description}`;
+
             const reportObj = {
                 user_id: user.id,
-                user_email: user.email,
-                description: description,
-                ...extraFields,
-                screenshot_base64: screenshot,
+                titulo: "Relatório de Erro - Calculadora",
+                descricao: description, // Usando o nome correto da coluna: descricao
+                screenshot: screenshot,
                 status: 'aberto',
                 created_at: new Date().toISOString(),
+                data_disponibilizacao: payload.dataDisponibilizacao || null,
+                prazo: payload.prazo ? parseInt(payload.prazo) : null,
+                is_crime: !!payload.isCrime,
                 page_url: window.location.href,
-                user_agent: navigator.userAgent,
+                user_agent: navigator.userAgent
             };
 
             console.log("BugReportProvider: Chamando supabase.from('bug_reports').insert()...");
@@ -4727,6 +4725,24 @@ const BugReportProvider = ({ children }) => {
                 console.warn("BugReportProvider: Falha ao enviar notificações (não crítico):", notifError);
             }
 
+            // Notificar o próprio usuário que abriu o chamado
+            try {
+                await window._supabaseClient
+                    .from('notifications')
+                    .insert({
+                        user_id: user.id,
+                        title: 'Chamado Registrado',
+                        message: 'Seu chamado foi registrado com sucesso. A equipe irá analisar em breve.',
+                        type: 'bug_report_created',
+                        read: false,
+                        related_id: reportData.id,
+                        created_at: new Date().toISOString(),
+                        link: '#admin?tab=bugs'
+                    });
+            } catch (notifError) {
+                console.warn("BugReportProvider: Falha ao notificar usuário:", notifError);
+            }
+
             if (window.showToast) window.showToast('Relatório de problema enviado com sucesso! Agradecemos a sua colaboração.', 'success');
             setIsReporting(false);
             return true;
@@ -4741,7 +4757,12 @@ const BugReportProvider = ({ children }) => {
         <BugReportContext.Provider value={{ openBugReport, reportData, setReportData }}>
             {children}
             {isReporting && screenshot && (
-                <BugReportModal screenshot={screenshot} onClose={() => setIsReporting(false)} onSubmit={handleSubmitReport} />
+                <BugReportModal 
+                    screenshot={screenshot} 
+                    onClose={() => setIsReporting(false)} 
+                    onSubmit={handleSubmitReport} 
+                    initialData={reportData} 
+                />
             )}
         </BugReportContext.Provider>
     );
@@ -5003,7 +5024,7 @@ const App = () => {
         }
 
         // Navegação baseada no tipo
-        if (notif.type === 'new_bug_report') {
+        if (notif.type === 'new_bug_report' || notif.type === 'bug_report_resolved' || notif.type === 'bug_report_created') {
             console.log("handleNotificationClick: Direcionando para chamados");
             setAdminInitialSection({ view: 'chamados', ts: Date.now() });
             setCurrentArea('Admin');

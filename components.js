@@ -721,3 +721,122 @@ const UserIDWatermark = ({ userId }) => {
     );
 };
 window.UserIDWatermark = UserIDWatermark;
+
+/**
+ * BugReportModal - Modal para reporte de bugs com captura de tela
+ */
+const BugReportModal = ({ screenshot, onClose, onSubmit, initialData = {} }) => {
+    const [description, setDescription] = useState('');
+    const [dataDisponibilizacao, setDataDisponibilizacao] = useState(initialData.dataDisponibilizacao || '');
+    const [prazo, setPrazo] = useState(initialData.prazo || '15');
+    const [isCrime, setIsCrime] = useState(initialData.isCrime || false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleConfirm = async () => {
+        if (!description.trim()) {
+            if (window.showToast) window.showToast("Por favor, detalhe o problema.", "warning");
+            return;
+        }
+        setIsSubmitting(true);
+        try {
+            const success = await onSubmit({
+                description,
+                dataDisponibilizacao,
+                prazo,
+                isCrime
+            });
+            if (success) onClose();
+        } catch (error) {
+            console.error("Erro ao enviar reporte:", error);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <TJPRModal
+            isOpen={true}
+            onClose={onClose}
+            title="Reportar Problema"
+            icon="bug_report"
+            maxWidth="2xl"
+        >
+            <div className="space-y-6">
+                <div className="relative group rounded-2xl overflow-hidden border tjpr-border-main shadow-2xl">
+                    <img src={screenshot} alt="Captura de tela" className="w-full h-auto max-h-[250px] object-contain bg-slate-900" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
+                        <span className="text-[10px] font-black text-white uppercase tracking-widest opacity-80">Captura automática da tela atual</span>
+                    </div>
+                </div>
+
+                <div className="space-y-6">
+                    <TJPRFormGroup cols={2}>
+                        <TJPRInput 
+                            label="Data da Disponibilização"
+                            type="date"
+                            value={dataDisponibilizacao}
+                            onChange={(e) => setDataDisponibilizacao(e.target.value)}
+                            icon="calendar_today"
+                        />
+                        <TJPRInput 
+                            label="Prazo (dias)"
+                            type="number"
+                            value={prazo}
+                            onChange={(e) => setPrazo(e.target.value)}
+                            icon="timer"
+                        />
+                    </TJPRFormGroup>
+
+                    <div className="flex items-center gap-3 px-1">
+                        <label className="relative flex items-center cursor-pointer group">
+                            <input 
+                                type="checkbox" 
+                                checked={isCrime}
+                                onChange={(e) => setIsCrime(e.target.checked)}
+                                className="sr-only peer"
+                            />
+                            <div className="w-6 h-6 border-2 tjpr-border-main rounded-md flex items-center justify-center transition-all peer-checked:bg-tjpr-primary peer-checked:border-tjpr-primary group-hover:border-tjpr-primary/50">
+                                <span className={`material-symbols-rounded text-white text-lg transition-transform ${isCrime ? 'scale-100' : 'scale-0'}`}>check</span>
+                            </div>
+                            <span className="ml-3 text-sm font-bold tjpr-text-main group-hover:tjpr-text-primary transition-colors">É processo Criminal?</span>
+                        </label>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <label className="tjpr-label">Descrição do Problema</label>
+                        <textarea
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            placeholder="Por favor, detalhe o que aconteceu, o que você esperava que acontecesse e os passos para reproduzir o erro."
+                            className="tjpr-input min-h-[120px] resize-none py-3 text-sm"
+                            required
+                        />
+                    </div>
+                </div>
+
+                <div className="flex gap-4 pt-2">
+                    <TJPRButton 
+                        variant="ghost" 
+                        onClick={onClose}
+                        className="flex-1"
+                        disabled={isSubmitting}
+                    >
+                        Cancelar
+                    </TJPRButton>
+                    <TJPRButton 
+                        variant="primary" 
+                        onClick={handleConfirm}
+                        className="flex-1"
+                        disabled={isSubmitting}
+                        icon={isSubmitting ? 'sync' : 'send'}
+                    >
+                        {isSubmitting ? 'Enviando...' : 'Enviar Relatório'}
+                    </TJPRButton>
+                </div>
+            </div>
+        </TJPRModal>
+    );
+};
+
+window.BugReportModal = BugReportModal;
+
