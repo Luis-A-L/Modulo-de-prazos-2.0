@@ -21,6 +21,7 @@
     "uiohook-napi": "^1.5.2"
   },
   "devDependencies": {
+    "@aws-sdk/client-s3": "^3.1048.0",
     "@electron/rebuild": "^3.6.0",
     "7zip-bin": "^5.2.0",
     "electron": "^28.1.0",

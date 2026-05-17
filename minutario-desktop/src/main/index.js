@@ -30,18 +30,16 @@ function createMainWindow() {
         show: false,
     });
 
+    mainWindow.once('ready-to-show', () => {
+        mainWindow.show();
+    });
+
     if (isDev) {
         mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
         mainWindow.webContents.openDevTools({ mode: 'detach' });
     } else {
         mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
     }
-
-    mainWindow.once('ready-to-show', () => {
-        if (process.argv.includes('--show')) {
-            mainWindow.show();
-        }
-    });
 
     mainWindow.on('close', (event) => {
         if (!app.isQuitting) {
@@ -102,6 +100,8 @@ function createQuickAccessWindow() {
 }
 
 app.on('ready', () => {
+    app.setAppUserModelId('com.minutario.desktop');
+
     createMainWindow();
     tray = initTray(mainWindow, createQuickAccessWindow);
 
@@ -125,6 +125,13 @@ app.on('ready', () => {
             }
         }, 500);
     }, 2000);
+
+    // Verifica periodicamente se o foco está correto (recupera de estados inconsistentes)
+    setInterval(() => {
+        if (!mainWindow) return;
+        const focused = mainWindow.isFocused() || (quickAccessWindow && !quickAccessWindow.isDestroyed() && quickAccessWindow.isFocused());
+        setAppFocused(focused);
+    }, 1000);
 
     globalShortcut.register('CommandOrControl+Shift+K', () => {
         createQuickAccessWindow();
@@ -170,4 +177,8 @@ ipcMain.on('show-main-window', () => {
         mainWindow.show();
         mainWindow.focus();
     }
+});
+
+ipcMain.on('app-user-active', () => {
+    setAppFocused(true);
 });

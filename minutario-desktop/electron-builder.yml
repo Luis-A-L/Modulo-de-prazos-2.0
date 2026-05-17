@@ -10,19 +10,13 @@ compression: maximum
 
 win:
   target:
-    - target: nsis
+    - target: portable
       arch:
         - x64
   icon: build/icon.png
 
-nsis:
-  oneClick: true
-  perMachine: false
-  createDesktopShortcut: true
-  createStartMenuShortcut: false
-  shortcutName: Minutario
-  runAfterFinish: false
-  deleteAppDataOnUninstall: false
+portable:
+  artifactName: "Minutario.exe"
 
 linux:
   target:

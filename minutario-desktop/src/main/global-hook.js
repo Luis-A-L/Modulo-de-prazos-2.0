@@ -75,63 +75,68 @@ function setAppFocused(focused) {
 }
 
 function handleKeyDown(event) {
-    if (isSimulatedKey(event)) return;
-    if (appFocused) return;
+    try {
+        if (isSimulatedKey(event)) return;
+        if (appFocused) return;
 
-    if (event.altKey || event.ctrlKey || event.metaKey) {
-        buffer = '';
-        return;
-    }
-
-    const char = getKeyChar(event);
-
-    if (char === '/') {
-        buffer = '/';
-        return;
-    }
-
-    if (buffer === '/') {
-        if (event.keycode === 32) {
+        if (event.altKey || event.ctrlKey || event.metaKey) {
             buffer = '';
             return;
         }
-        if (char && /^[a-zA-Z0-9]$/.test(char)) {
-            buffer += char;
-            if (buffer.length > MAX_BUFFER_LENGTH) buffer = '';
+
+        const char = getKeyChar(event);
+
+        if (char === '/') {
+            buffer = '/';
             return;
         }
-        buffer = '';
-        return;
-    }
 
-    if (buffer.startsWith('/') && buffer.length > 1) {
-        if (event.keycode === 32) {
-            const shortcut = buffer.substring(1).toLowerCase();
-            buffer = '';
-
-            if (expanderCallback) {
-                expanderCallback(shortcut);
+        if (buffer === '/') {
+            if (event.keycode === 32) {
+                buffer = '';
+                return;
             }
+            if (char && /^[a-zA-Z0-9]$/.test(char)) {
+                buffer += char;
+                if (buffer.length > MAX_BUFFER_LENGTH) buffer = '';
+                return;
+            }
+            buffer = '';
             return;
         }
 
-        if (char && /^[a-zA-Z0-9]$/.test(char)) {
-            buffer += char;
-            if (buffer.length > MAX_BUFFER_LENGTH) buffer = '';
+        if (buffer.startsWith('/') && buffer.length > 1) {
+            if (event.keycode === 32) {
+                const shortcut = buffer.substring(1).toLowerCase();
+                buffer = '';
+
+                if (expanderCallback) {
+                    expanderCallback(shortcut);
+                }
+                return;
+            }
+
+            if (char && /^[a-zA-Z0-9]$/.test(char)) {
+                buffer += char;
+                if (buffer.length > MAX_BUFFER_LENGTH) buffer = '';
+                return;
+            }
+
+            if (event.keycode === 8) {
+                buffer = buffer.slice(0, -1);
+                if (buffer === '/') buffer = '';
+                return;
+            }
+
+            buffer = '';
             return;
         }
 
-        if (event.keycode === 8) {
-            buffer = buffer.slice(0, -1);
-            if (buffer === '/') buffer = '';
-            return;
+        if (event.keycode !== 32) {
+            buffer = '';
         }
-
-        buffer = '';
-        return;
-    }
-
-    if (event.keycode !== 32) {
+    } catch (err) {
+        console.error('[Minutário] Global hook error:', err);
         buffer = '';
     }
 }

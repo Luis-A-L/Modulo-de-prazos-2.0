@@ -49,6 +49,9 @@ contextBridge.exposeInMainWorld('MinutarioDesktop', {
     onHookStatus: (callback) => {
         ipcRenderer.on('hook-status', (event, status) => callback(status));
     },
+    userActive: () => {
+        ipcRenderer.send('app-user-active');
+    },
     showSaveDialog: (options) => {
         return ipcRenderer.invoke('show-save-dialog', options);
     },

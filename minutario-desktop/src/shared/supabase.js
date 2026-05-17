@@ -84,20 +84,15 @@ async function deleteFolder(id) {
 }
 
 async function getInstallerDownloadUrl(platform) {
-    const c = getClient();
-    const bucket = CONFIG.INSTALLER_BUCKET;
-
     const files = {
-        win32: 'Minutario-Setup-latest.exe',
+        win32: 'Minutario-Portable-latest.exe',
         darwin: 'Minutario-latest.dmg',
         linux: 'Minutario-latest.AppImage',
     };
 
     const fileName = files[platform] || files.win32;
 
-    const { data, error } = await c.storage.from(bucket).createSignedUrl(fileName, 3600);
-    if (error) throw error;
-    return data.signedUrl;
+    return 'https://github.com/Luis-A-L/Modulo-de-prazos-2.0/releases/download/v1.0.0/' + fileName;
 }
 
 module.exports = {

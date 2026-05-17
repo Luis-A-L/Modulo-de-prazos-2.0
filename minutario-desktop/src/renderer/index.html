@@ -69,6 +69,20 @@
             const [showExtModal, setShowExtModal] = useState(false);
             const [updateInfo, setUpdateInfo] = useState(null);
             const [hookActive, setHookActive] = useState(null);
+            const [toasts, setToasts] = useState([]);
+
+            useEffect(() => {
+                window.showToast = (message, type = 'info') => {
+                    const id = Date.now() + Math.random();
+                    setToasts(prev => [...prev, { id, message, type }]);
+                    setTimeout(() => {
+                        setToasts(prev => prev.filter(t => t.id !== id));
+                    }, 4000);
+                };
+                return () => {
+                    window.showToast = undefined;
+                };
+            }, []);
 
             useEffect(() => {
                 saveToStorage(STORAGE_KEY_TEMPLATES, allTemplates);
@@ -80,6 +94,18 @@
             useEffect(() => {
                 saveToStorage(STORAGE_KEY_FOLDERS, allFolders);
             }, [allFolders]);
+
+            useEffect(() => {
+                const onUserActive = () => {
+                    if (window.MinutarioDesktop) window.MinutarioDesktop.userActive();
+                };
+                document.addEventListener('mousedown', onUserActive, true);
+                document.addEventListener('focusin', onUserActive, true);
+                return () => {
+                    document.removeEventListener('mousedown', onUserActive, true);
+                    document.removeEventListener('focusin', onUserActive, true);
+                };
+            }, []);
 
             useEffect(() => {
                 supabaseClient.auth.getSession().then(({ data: { session } }) => {
@@ -145,10 +171,39 @@
                     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
                     if (error) throw error;
                     showToast('Login realizado!', 'success');
-                    handleSync();
+                    handleSyncInternal(data.user);
                 } catch (err) {
                     showToast(err.message, 'error');
                 }
+            }
+
+            async function handleSyncInternal(syncUser) {
+                const u = syncUser || user;
+                if (!u) { showToast('Faça login para sincronizar', 'warning'); return; }
+                setSyncStatus('syncing');
+                try {
+                    const { data: templates, error: tErr } = await supabaseClient
+                        .from('minutario_templates').select('*').eq('user_id', u.id);
+                    const { data: folders, error: fErr } = await supabaseClient
+                        .from('minutario_folders').select('*').eq('user_id', u.id);
+
+                    if (tErr || fErr) throw tErr || fErr;
+
+                    const mergedT = mergeById(allTemplates, templates || []);
+                    const mergedF = mergeById(allFolders, folders || []);
+
+                    setAllTemplates(mergedT);
+                    setAllFolders(mergedF);
+                    setSyncStatus('updated');
+                    showToast('Sincronizado com sucesso!', 'success');
+                } catch (err) {
+                    setSyncStatus('offline');
+                    showToast('Erro ao sincronizar: ' + err.message, 'error');
+                }
+            }
+
+            async function handleSync() {
+                handleSyncInternal();
             }
 
             async function handleLogout() {
@@ -307,19 +362,15 @@
                 try {
                     const platform = window.MinutarioDesktop?.platform || 'win32';
                     const fileName = {
-                        win32: 'Minutario-Setup-latest.exe',
+                        win32: 'Minutario-Portable-latest.exe',
                         darwin: 'Minutario-latest.dmg',
                         linux: 'Minutario-latest.AppImage',
-                    }[platform] || 'Minutario-Setup-latest.exe';
+                    }[platform] || 'Minutario-Portable-latest.exe';
 
-                    const { data, error } = await supabaseClient
-                        .storage.from('minutario-installers')
-                        .createSignedUrl(fileName, 3600);
-
-                    if (error) throw error;
+                    const downloadUrl = 'https://github.com/Luis-A-L/Modulo-de-prazos-2.0/releases/download/v1.0.0/' + fileName;
 
                     const a = document.createElement('a');
-                    a.href = data.signedUrl;
+                    a.href = downloadUrl;
                     a.download = fileName;
                     document.body.appendChild(a);
                     a.click();
@@ -332,7 +383,7 @@
                 }
             }
 
-            return h('div', { className: 'flex h-full' },
+            return h('div', { className: 'flex h-full relative' },
                 h(Sidebar, {
                     allFolders, selectedFolder, onSelectFolder: setSelectedFolder,
                     allTemplates, searchQuery, onSearch: setSearchQuery,
@@ -369,6 +420,35 @@
                 showExtModal && h(ExtensionModal, {
                     onClose: () => setShowExtModal(false),
                 }),
+                toasts.length > 0 && h('div', { className: 'fixed bottom-6 right-6 z-[9999] flex flex-col gap-2 max-w-sm pointer-events-none' },
+                    toasts.map(toast => {
+                        const bgColors = {
+                            success: 'bg-emerald-600/90 text-white border-emerald-500/30',
+                            error: 'bg-rose-600/90 text-white border-rose-500/30',
+                            warning: 'bg-amber-600/90 text-white border-amber-500/30',
+                            info: 'bg-indigo-600/90 text-white border-indigo-500/30',
+                        };
+                        const icons = {
+                            success: 'check_circle',
+                            error: 'error',
+                            warning: 'warning',
+                            info: 'info',
+                        };
+                        return h('div', {
+                            key: toast.id,
+                            className: `flex items-center gap-3 px-4 py-3 rounded-xl border backdrop-blur shadow-xl pointer-events-auto transition-all duration-300 ${bgColors[toast.type || 'info'] || bgColors.info}`
+                        },
+                            h('span', { className: 'material-symbols-rounded text-lg' }, icons[toast.type || 'info'] || icons.info),
+                            h('span', { className: 'text-xs font-semibold' }, toast.message),
+                            h('button', {
+                                onClick: () => setToasts(prev => prev.filter(t => t.id !== toast.id)),
+                                className: 'ml-auto text-white/70 hover:text-white transition-colors flex items-center'
+                            },
+                                h('span', { className: 'material-symbols-rounded text-sm' }, 'close')
+                            )
+                        );
+                    })
+                )
             );
         }
 

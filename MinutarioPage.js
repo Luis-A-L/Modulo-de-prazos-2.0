@@ -374,53 +374,15 @@ const MinutarioPage = () => {
                 linux: 'Minutario-latest.AppImage',
             }[platform] || 'Minutario-Portable-latest.exe';
 
-            const urlsToTry = [
-                null,
-                'https://github.com/Luis-A-L/Modulo-de-prazos-2.0/releases/download/v1.0.0/' + fileName,
-                'https://ifkhwqfxtdfbotifxfzq.supabase.co/storage/v1/object/public/minutario-installers/' + fileName,
-                './Minutario-Portable-latest.exe',
-            ];
+            const downloadUrl = 'https://github.com/Luis-A-L/Modulo-de-prazos-2.0/releases/download/v1.0.0/' + fileName;
 
-            const sb = window._supabaseClient;
-            if (sb) {
-                try {
-                    const { data, error } = await sb.storage
-                        .from('minutario-installers')
-                        .createSignedUrl(fileName, 3600);
-                    if (!error && data?.signedUrl) {
-                        urlsToTry[0] = data.signedUrl;
-                    }
-                } catch (_) {}
-            }
-
-            let downloaded = false;
-            for (const url of urlsToTry) {
-                if (!url) continue;
-                try {
-                    const resp = await fetch(url, { method: 'HEAD' });
-                    if (resp.ok || resp.status === 200) {
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = fileName;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        window.showToast?.('Download iniciado!', 'success');
-                        downloaded = true;
-                        return;
-                    }
-                } catch (_) {}
-            }
-
-            if (!downloaded) {
-                const a = document.createElement('a');
-                a.href = urlsToTry[1] || urlsToTry[2];
-                a.download = fileName;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.showToast?.('Download iniciado! (pode falhar se o arquivo não estiver no servidor)', 'info');
-            }
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.showToast?.('Download iniciado!', 'success');
         } catch (err) {
             console.error('Erro ao baixar instalador:', err);
             window.showToast?.('Erro ao baixar instalador.', 'error');
