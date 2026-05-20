@@ -1419,39 +1419,65 @@ const TriagemIAPage = () => {
         );
     };
 
-    // Salvar triagem confirmada no Supabase com autoria
+    // Salvar triagem no Supabase — INSERT direto com todos os dados do resultado
     const salvarTriagem = async () => {
-        if (!analiseId) return;
         setSalvandoTriagem(true);
         try {
             const sb = window._supabaseClient;
             const session = (await sb.auth.getSession()).data?.session;
             const userId = session?.user?.id;
+            if (!userId) throw new Error('Usuário não autenticado. Faça login novamente.');
             const userName = userData?.display_name || userData?.name || session?.user?.email || 'Operador';
-            const { error } = await sb
+
+            const auditoria = [{
+                usuario_id: userId,
+                usuario_nome: userName,
+                data_hora: new Date().toISOString(),
+                tipo: 'criacao',
+                campos_alterados: {}
+            }];
+
+            // Monta resultado_final compatível com HistoricoTriagensPage
+            const camposConsolidados = resultado?.campos || [];
+            const resultadoFinal = {
+                campos_consolidados: camposConsolidados,
+                camposMap: Object.fromEntries(camposConsolidados.map(c => [c.campo, c.informacao])),
+                resumo_executivo: {
+                    vicios: resultado?.resumo?.vicios || [],
+                    inconsistencias: resultado?.resumo?.inconsistencias || [],
+                    observacoes: resultado?.observacoes || '',
+                    mp: { localizado: resultado?.resumo?.mpLocalizado }
+                }
+            };
+
+            const { data: novo, error } = await sb
                 .from('analises_triagem')
-                .update({
+                .insert({
+                    user_id: userId,
+                    document_names: documentos.map(f => f.name),
+                    modelo_ia: modeloSelecionado || 'desconhecido',
+                    resultado_final: resultadoFinal,
                     status: 'salvo',
                     criado_por_nome: userName,
                     notas_operador: notasParaSalvar,
-                    historico_edicoes: [{
-                        usuario_id: userId,
-                        usuario_nome: userName,
-                        data_hora: new Date().toISOString(),
-                        tipo: 'criacao',
-                        campos_alterados: {}
-                    }]
+                    historico_edicoes: auditoria
                 })
-                .eq('id', analiseId);
+                .select('id')
+                .single();
+
             if (error) throw error;
+            if (novo?.id) setAnaliseId(novo.id);
+
             setTriagemJaSalva(true);
             setShowSalvarModal(false);
             setNotasParaSalvar('');
-            const evt = new CustomEvent('showToast', { detail: { texto: `Triagem salva por ${userName}! Acesse o Histórico de Triagens para gerenciar.`, tipo: 'success' } });
+            const evt = new CustomEvent('showToast', {
+                detail: { texto: `Triagem salva por ${userName}! Acesse o Histórico de Triagens.`, tipo: 'success' }
+            });
             document.dispatchEvent(evt);
         } catch (err) {
             console.error('[TriagemIA] Erro ao salvar triagem:', err);
-            alert('Erro ao salvar triagem: ' + err.message);
+            alert('Erro ao salvar triagem: ' + (err.message || JSON.stringify(err)));
         } finally {
             setSalvandoTriagem(false);
         }
