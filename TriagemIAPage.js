@@ -67,6 +67,7 @@ const { useState, useCallback, useEffect, useRef } = React;
 const TriagemIAPage = () => {
     const auth = typeof useAuth === 'function' ? useAuth() : {};
     const setCurrentArea = auth?.setCurrentArea;
+    const userData = auth?.userData;
     const [documentos, setDocumentos] = useState([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [resultado, setResultado] = useState(() => {
@@ -117,14 +118,15 @@ const TriagemIAPage = () => {
     });
     const [categoriaAtiva, setCategoriaAtiva] = useState('todas');
     const [etapaSelecionada, setEtapaSelecionada] = useState(null);
-    const [ocrProgresso, setOcrProgresso] = useState(null); // { pagina, total, pct, tipo }
-    const [ocrScore, setOcrScore] = useState(null); // 0-100 score de confiança
+    const [ocrProgresso, setOcrProgresso] = useState(null);
+    const [ocrScore, setOcrScore] = useState(null);
     const [exportandoPdf, setExportandoPdf] = useState(false);
-    const [showHistorico, setShowHistorico] = useState(false);
-    const [historico, setHistorico] = useState([]);
-    const [loadingHistorico, setLoadingHistorico] = useState(false);
+    const [showSalvarModal, setShowSalvarModal] = useState(false);
+    const [notasParaSalvar, setNotasParaSalvar] = useState('');
+    const [salvandoTriagem, setSalvandoTriagem] = useState(false);
+    const [triagemJaSalva, setTriagemJaSalva] = useState(false);
     const fichaRef = useRef(null);
-    const [camposEditados, setCamposEditados] = useState(new Set()); // rastrear campos confirmados
+    const [camposEditados, setCamposEditados] = useState(new Set());
 
     useEffect(() => {
         if (opencodeApiKey) {
@@ -1417,58 +1419,41 @@ const TriagemIAPage = () => {
         );
     };
 
-    // Carregar histórico de triagens do Supabase
-    const carregarHistorico = async () => {
-        setLoadingHistorico(true);
-        setShowHistorico(true);
+    // Salvar triagem confirmada no Supabase com autoria
+    const salvarTriagem = async () => {
+        if (!analiseId) return;
+        setSalvandoTriagem(true);
         try {
             const sb = window._supabaseClient;
-            const userId = (await sb.auth.getSession()).data?.session?.user?.id;
-            if (!userId) { setHistorico([]); return; }
-            const { data, error } = await sb
+            const session = (await sb.auth.getSession()).data?.session;
+            const userId = session?.user?.id;
+            const userName = userData?.display_name || userData?.name || session?.user?.email || 'Operador';
+            const { error } = await sb
                 .from('analises_triagem')
-                .select('id, created_at, document_names, modelo_ia, resultado_final')
-                .eq('user_id', userId)
-                .order('created_at', { ascending: false })
-                .limit(20);
+                .update({
+                    status: 'salvo',
+                    criado_por_nome: userName,
+                    notas_operador: notasParaSalvar,
+                    historico_edicoes: [{
+                        usuario_id: userId,
+                        usuario_nome: userName,
+                        data_hora: new Date().toISOString(),
+                        tipo: 'criacao',
+                        campos_alterados: {}
+                    }]
+                })
+                .eq('id', analiseId);
             if (error) throw error;
-            setHistorico(data || []);
-        } catch (err) {
-            console.error('Erro ao carregar histórico:', err);
-            setHistorico([]);
-        } finally {
-            setLoadingHistorico(false);
-        }
-    };
-
-    // Restaurar uma triagem do histórico
-    const restaurarTriagem = (item) => {
-        try {
-            const rev = item.resultado_final;
-            if (!rev || !rev.campos_consolidados) {
-                alert('Esta triagem não possui dados consolidados para restaurar.');
-                return;
-            }
-            const parsed = {
-                campos: rev.campos_consolidados.map(c => ({
-                    etapa: c.etapa, campo: c.campo,
-                    informacao: c.informacao, movimento: c.movimento || '-'
-                })),
-                camposMap: Object.fromEntries(rev.campos_consolidados.map(c => [c.campo, c.informacao])),
-                resumo: {
-                    vicios: rev.resumo_executivo?.vicios || [],
-                    mpLocalizado: rev.resumo_executivo?.mp?.localizado,
-                    inconsistencias: rev.resumo_executivo?.inconsistencias || []
-                },
-                observacoes: rev.resumo_executivo?.observacoes || ''
-            };
-            setResultado(parsed);
-            setAnaliseId(item.id);
-            setShowHistorico(false);
-            const evt = new CustomEvent('showToast', { detail: { texto: 'Triagem restaurada com sucesso!', tipo: 'success' } });
+            setTriagemJaSalva(true);
+            setShowSalvarModal(false);
+            setNotasParaSalvar('');
+            const evt = new CustomEvent('showToast', { detail: { texto: `Triagem salva por ${userName}! Acesse o Histórico de Triagens para gerenciar.`, tipo: 'success' } });
             document.dispatchEvent(evt);
-        } catch (e) {
-            alert('Erro ao restaurar triagem: ' + e.message);
+        } catch (err) {
+            console.error('[TriagemIA] Erro ao salvar triagem:', err);
+            alert('Erro ao salvar triagem: ' + err.message);
+        } finally {
+            setSalvandoTriagem(false);
         }
     };
 
@@ -1762,12 +1747,27 @@ OBS: ${fichaResumo.obs || ''}
                     </div>
                     <div className="flex items-center gap-2">
                         <button
-                            onClick={carregarHistorico}
-                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-600/20 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+                            onClick={() => setCurrentArea?.('HistoricoTriagens')}
+                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-600/20 rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95"
                         >
-                            <span className="material-symbols-rounded text-sm">history</span>
+                            <span className="material-symbols-rounded text-sm">manage_search</span>
                             Histórico
                         </button>
+                        {resultado && analiseId && !triagemJaSalva && (
+                            <button
+                                onClick={() => setShowSalvarModal(true)}
+                                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-md shadow-emerald-600/10"
+                            >
+                                <span className="material-symbols-rounded text-sm">save</span>
+                                Salvar Triagem
+                            </button>
+                        )}
+                        {resultado && triagemJaSalva && (
+                            <span className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl text-xs font-black uppercase tracking-wider">
+                                <span className="material-symbols-rounded text-sm">check_circle</span>
+                                Triagem Salva
+                            </span>
+                        )}
                         {resultado && (
                             <button
                                 onClick={() => {
@@ -1781,6 +1781,8 @@ OBS: ${fichaResumo.obs || ''}
                                     setOcrScore(null);
                                     setOcrProgresso(null);
                                     setCamposEditados(new Set());
+                                    setTriagemJaSalva(false);
+                                    setShowSalvarModal(false);
                                     localStorage.removeItem('tjpr_triagem_resultado');
                                     localStorage.removeItem('tjpr_triagem_textoOcr');
                                     localStorage.removeItem('tjpr_triagem_analiseId');
@@ -1788,7 +1790,7 @@ OBS: ${fichaResumo.obs || ''}
                                     localStorage.removeItem('tjpr_triagem_chatMessages');
                                     localStorage.removeItem('tjpr_triagem_fichaResumo');
                                 }}
-                                className="flex items-center gap-2 px-4 py-2 bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 border border-rose-600/20 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+                                className="flex items-center gap-2 px-4 py-2 bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 border border-rose-600/20 rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95"
                             >
                                 <span className="material-symbols-rounded text-sm">refresh</span>
                                 Nova Triagem
@@ -2716,65 +2718,94 @@ OBS: ${fichaResumo.obs || ''}
                     );
                 })()}
 
-                {/* Modal de Histórico de Triagens */}
-                {showHistorico && (
-                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setShowHistorico(false)}>
-                        <div className="w-full max-w-2xl bg-slate-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
-                            <div className="flex items-center justify-between p-5 border-b border-white/10 bg-indigo-600/5">
+                {/* Modal de Salvar Triagem */}
+                {showSalvarModal && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300" onClick={() => !salvandoTriagem && setShowSalvarModal(false)}>
+                        <div className="w-full max-w-lg bg-slate-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
+
+                            {/* Header */}
+                            <div className="flex items-center justify-between p-5 border-b border-white/10 bg-emerald-600/5">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-indigo-500/10 text-indigo-400 rounded-xl flex items-center justify-center border border-indigo-500/20">
-                                        <span className="material-symbols-rounded">history</span>
+                                    <div className="w-10 h-10 bg-emerald-500/15 text-emerald-400 rounded-xl flex items-center justify-center border border-emerald-500/20">
+                                        <span className="material-symbols-rounded">save</span>
                                     </div>
                                     <div>
-                                        <h3 className="text-sm font-black tjpr-text-main">Histórico de Triagens</h3>
-                                        <p className="text-[10px] tjpr-text-dim">Últimas 20 análises realizadas nesta conta</p>
+                                        <h3 className="text-sm font-black tjpr-text-main">Salvar Triagem</h3>
+                                        <p className="text-[10px] tjpr-text-dim">Registre as notas e confirme o salvamento com sua autoria</p>
                                     </div>
                                 </div>
-                                <button onClick={() => setShowHistorico(false)} className="p-2 text-slate-400 hover:text-rose-400 hover:bg-white/5 rounded-xl transition-all">
-                                    <span className="material-symbols-rounded">close</span>
-                                </button>
+                                {!salvandoTriagem && (
+                                    <button onClick={() => setShowSalvarModal(false)} className="p-2 text-slate-400 hover:text-rose-400 hover:bg-white/5 rounded-xl transition-all">
+                                        <span className="material-symbols-rounded">close</span>
+                                    </button>
+                                )}
                             </div>
-                            <div className="p-5 max-h-[60vh] overflow-y-auto custom-scrollbar space-y-3">
-                                {loadingHistorico ? (
-                                    <div className="text-center py-12">
-                                        <div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full mx-auto mb-3"></div>
-                                        <p className="text-sm tjpr-text-dim">Carregando histórico...</p>
-                                    </div>
-                                ) : historico.length === 0 ? (
-                                    <div className="text-center py-12 space-y-3">
-                                        <span className="material-symbols-rounded text-4xl text-slate-600 block">history</span>
-                                        <p className="text-sm tjpr-text-dim font-semibold">Nenhuma triagem salva encontrada.</p>
-                                        <p className="text-xs tjpr-text-dim">As triagens são salvas automaticamente ao analisar documentos.</p>
-                                    </div>
-                                ) : (
-                                    historico.map((item, idx) => {
-                                        const data = new Date(item.created_at).toLocaleString('pt-BR');
-                                        const nomes = Array.isArray(item.document_names) ? item.document_names.join(', ') : (item.document_names || 'Sem nome');
-                                        const temResultado = item.resultado_final?.campos_consolidados?.length > 0;
+
+                            {/* Resumo dos campos-chave */}
+                            <div className="p-5 border-b border-white/10 space-y-3">
+                                <p className="text-[10px] font-black tjpr-text-dim uppercase tracking-wider">Resumo da Análise</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {[
+                                        { label: 'Câmara', campo: 'Câmara' },
+                                        { label: 'Tipo do Recurso', campo: 'Tipo do Recurso' },
+                                        { label: 'Partes', campo: 'Partes Envolvidas' },
+                                        { label: 'Relator', campo: 'Relator/Desembargador' }
+                                    ].map(({ label, campo }) => {
+                                        const val = resultado?.campos?.find(c => c.campo === campo)?.informacao;
+                                        const ausente = !val || val === 'Não encontrado ou não informado';
                                         return (
-                                            <div key={item.id || idx} className="flex items-start justify-between gap-3 p-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl transition-all">
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-xs font-black tjpr-text-main truncate">{nomes}</p>
-                                                    <p className="text-[10px] tjpr-text-dim mt-0.5">{data} · {item.modelo_ia || 'Modelo padrão'}</p>
-                                                    {temResultado && (
-                                                        <p className="text-[9px] text-emerald-400 mt-1 flex items-center gap-1">
-                                                            <span className="material-symbols-rounded text-[10px]">check_circle</span>
-                                                            {item.resultado_final.campos_consolidados.length} campos extraídos
-                                                        </p>
-                                                    )}
-                                                </div>
-                                                <button
-                                                    onClick={() => restaurarTriagem(item)}
-                                                    disabled={!temResultado}
-                                                    className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                                                >
-                                                    <span className="material-symbols-rounded text-sm">restore</span>
-                                                    Restaurar
-                                                </button>
+                                            <div key={campo} className="p-2.5 bg-black/30 rounded-xl border border-white/5">
+                                                <p className="text-[8px] font-black tjpr-text-dim uppercase tracking-wider">{label}</p>
+                                                <p className={`text-[10px] font-bold mt-0.5 truncate ${ausente ? 'text-slate-500 italic' : 'tjpr-text-main'}`}>
+                                                    {ausente ? '—' : val}
+                                                </p>
                                             </div>
                                         );
-                                    })
-                                )}
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Notas do Operador */}
+                            <div className="p-5 space-y-3">
+                                <div>
+                                    <label className="text-[10px] font-black tjpr-text-dim uppercase tracking-wider flex items-center gap-1.5 mb-2">
+                                        <span className="material-symbols-rounded text-amber-400 text-sm">sticky_note_2</span>
+                                        Notas do Operador (opcional)
+                                    </label>
+                                    <textarea
+                                        value={notasParaSalvar}
+                                        onChange={e => setNotasParaSalvar(e.target.value)}
+                                        rows={4}
+                                        placeholder="Adicione observações, pendências ou informações relevantes sobre esta triagem..."
+                                        className="w-full px-4 py-3 bg-black/40 border border-white/10 focus:border-indigo-500 rounded-2xl text-xs tjpr-text-main outline-none resize-none transition-colors font-medium leading-relaxed"
+                                        disabled={salvandoTriagem}
+                                    />
+                                </div>
+                                <p className="text-[10px] tjpr-text-dim flex items-center gap-1.5">
+                                    <span className="material-symbols-rounded text-[11px] text-indigo-400">info</span>
+                                    A triagem será salva com seu nome de usuário, data e hora atuais.
+                                </p>
+                            </div>
+
+                            {/* Botões */}
+                            <div className="p-4 border-t border-white/10 bg-white/[0.02] flex gap-3 justify-end">
+                                <button
+                                    onClick={() => setShowSalvarModal(false)}
+                                    disabled={salvandoTriagem}
+                                    className="px-5 py-2.5 bg-white/5 hover:bg-white/10 tjpr-text-dim border border-white/10 rounded-xl text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={salvarTriagem}
+                                    disabled={salvandoTriagem}
+                                    className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50 shadow-md shadow-emerald-600/10"
+                                >
+                                    <span className="material-symbols-rounded text-sm">
+                                        {salvandoTriagem ? 'hourglass_empty' : 'save'}
+                                    </span>
+                                    {salvandoTriagem ? 'Salvando...' : 'Confirmar e Salvar'}
+                                </button>
                             </div>
                         </div>
                     </div>

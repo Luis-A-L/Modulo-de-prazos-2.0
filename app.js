@@ -7,7 +7,7 @@ const {
     TJPRModal, NotificationsPanel, CookieConsent, TJPRFormGroup, TJPRSelect,
     MinutasAdminPage, CalendarioAdminPage, BugReportsPage,
     TJPRLoginPage, MinutaPreparoPage, TJPRToastContainer, TJPRConfirmModal,
-    TriagemIAPage, BugReportModal, AgentStudioAdminPage
+    TriagemIAPage, BugReportModal, AgentStudioAdminPage, HistoricoTriagensPage
 } = window;
 
 const usePagination = (data, itemsPerPage) => {
@@ -4444,6 +4444,7 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, toggleCollapse, deferredPromp
             icon: 'calculate'
         },
         { id: 'TriagemIA', label: 'Análise de Triagem', icon: 'psychology' },
+        { id: 'HistoricoTriagens', label: 'Histórico de Triagens', icon: 'manage_search' },
         { id: 'Minuta', label: 'Minuta de Preparo', icon: 'description', condition: acessoMinutaPreparo },
         { id: 'Minutario', label: 'Minutário', icon: 'article', condition: acessoMinutario },
         { id: 'Admin', label: 'Administração', icon: 'admin_panel_settings', condition: !!(isAdmin || isSetorAdmin) },
@@ -5215,6 +5216,8 @@ const App = () => {
                                     <CalculatorApp />
                                 ) : currentArea === 'TriagemIA' ? (
                                     <TriagemIAPage />
+                                ) : currentArea === 'HistoricoTriagens' ? (
+                                    <HistoricoTriagensPage />
                                 ) : currentArea === 'Minuta' ? (
                                     acessoMinutaPreparo ? (
                                         <MinutaPreparoPage />

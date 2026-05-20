@@ -24,6 +24,7 @@ const urlsToCache = [
   './MinutarioPage.js',
   './AgentStudioAdminPage.js',
   './TriagemIAPage.js',
+  './HistoricoTriagensPage.js',
   './Logo.png',
   './manifest.json'
 ];
