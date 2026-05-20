@@ -7,7 +7,7 @@ const {
     TJPRModal, NotificationsPanel, CookieConsent, TJPRFormGroup, TJPRSelect,
     MinutasAdminPage, CalendarioAdminPage, BugReportsPage,
     TJPRLoginPage, MinutaPreparoPage, TJPRToastContainer, TJPRConfirmModal,
-    TriagemIAPage, BugReportModal
+    TriagemIAPage, BugReportModal, AgentStudioAdminPage
 } = window;
 
 const usePagination = (data, itemsPerPage) => {
@@ -3275,13 +3275,22 @@ const AdminPage = ({ setCurrentArea, initialSection }) => {
                     </button>
                     
                     {(adminUserData?.role === 'admin' || adminUserData?.role === 'setor_admin') && (
-                        <button 
-                            onClick={() => setAdminSection('minutas')} 
-                            className={`flex items-center gap-2 px-6 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${adminSection === 'minutas' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/40 scale-105' : 'tjpr-bg-alt tjpr-text-dim hover:tjpr-text-main tjpr-bg-hover'}`}
-                        >
-                            <span className="material-symbols-rounded text-sm">description</span>
-                            Minutas
-                        </button>
+                        <>
+                            <button 
+                                onClick={() => setAdminSection('minutas')} 
+                                className={`flex items-center gap-2 px-6 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${adminSection === 'minutas' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/40 scale-105' : 'tjpr-bg-alt tjpr-text-dim hover:tjpr-text-main tjpr-bg-hover'}`}
+                            >
+                                <span className="material-symbols-rounded text-sm">description</span>
+                                Minutas
+                            </button>
+                            <button 
+                                onClick={() => setAdminSection('agentes')} 
+                                className={`flex items-center gap-2 px-6 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${adminSection === 'agentes' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/40 scale-105' : 'tjpr-bg-alt tjpr-text-dim hover:tjpr-text-main tjpr-bg-hover'}`}
+                            >
+                                <span className="material-symbols-rounded text-sm">smart_toy</span>
+                                Agentes IA
+                            </button>
+                        </>
                     )}
                     
                     {adminUserData?.role === 'admin' && (
@@ -3773,6 +3782,7 @@ const AdminPage = ({ setCurrentArea, initialSection }) => {
                 </div>
             )}
             {adminSection === 'minutas' && <MinutasAdminPage />}
+            {adminSection === 'agentes' && <AgentStudioAdminPage />}
             {adminSection === 'calendar' && <CalendarioAdminPage />}
             {adminSection === 'chamados' && <BugReportsPage />}
             {adminSection === 'broadcast' && (

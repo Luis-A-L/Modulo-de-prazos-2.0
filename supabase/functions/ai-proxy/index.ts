@@ -1,10 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
-const API_KEY = Deno.env.get("API_KEY") || "sk-oHYRgWVzeaSDgoQz0gfCn2k3j06mCaOe9BbmEL2fdQtnBfUohIT1Onal3cjgRCV4";
+const API_KEY = Deno.env.get("API_KEY") || Deno.env.get("OPENCODE_API_KEY") || Deno.env.get("OPENCODE") || Deno.env.get("OPENROUTER_API_KEY") || "sk-oHYRgWVzeaSDgoQz0gfCn2k3j06mCaOe9BbmEL2fdQtnBfUohIT1Onal3cjgRCV4";
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info, x-opencode-key",
 };
 
 serve(async (req) => {
@@ -17,14 +17,18 @@ serve(async (req) => {
   }
 
   try {
+    const customKey = req.headers.get("x-opencode-key");
+    const keyToUse = customKey || API_KEY;
+
     const { model, messages, temperature, max_tokens } = await req.json();
 
     const response = await fetch("https://opencode.ai/zen/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${API_KEY}`,
+        "Authorization": `Bearer ${keyToUse}`,
       },
+
       body: JSON.stringify({
         model,
         messages,
