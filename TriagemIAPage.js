@@ -117,6 +117,14 @@ const TriagemIAPage = () => {
     });
     const [categoriaAtiva, setCategoriaAtiva] = useState('todas');
     const [etapaSelecionada, setEtapaSelecionada] = useState(null);
+    const [ocrProgresso, setOcrProgresso] = useState(null); // { pagina, total, pct, tipo }
+    const [ocrScore, setOcrScore] = useState(null); // 0-100 score de confiança
+    const [exportandoPdf, setExportandoPdf] = useState(false);
+    const [showHistorico, setShowHistorico] = useState(false);
+    const [historico, setHistorico] = useState([]);
+    const [loadingHistorico, setLoadingHistorico] = useState(false);
+    const fichaRef = useRef(null);
+    const [camposEditados, setCamposEditados] = useState(new Set()); // rastrear campos confirmados
 
     useEffect(() => {
         if (opencodeApiKey) {
@@ -521,21 +529,27 @@ const TriagemIAPage = () => {
 
                 try {
                     if (tipo === 'application/pdf') {
+                        setOcrProgresso({ pagina: 0, total: 1, pct: 0, tipo: 'lendo' });
                         setLogProcessamento(`📄 Lendo PDF "${nome}"...`);
                         const arrayBuffer = await readFileAsArrayBuffer(file);
                         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                        setLogProcessamento(`📄 ${nome}: ${pdf.numPages} página(s) encontrada(s)`);
+                        const totalPags = pdf.numPages;
+                        setOcrProgresso({ pagina: 0, total: totalPags, pct: 0, tipo: 'pdf' });
+                        setLogProcessamento(`📄 ${nome}: ${totalPags} página(s) encontrada(s)`);
                         let fullText = '';
+                        let totalConfianca = 0;
+                        let paginasOcr = 0;
 
-                        for (let i = 1; i <= pdf.numPages; i++) {
+                        for (let i = 1; i <= totalPags; i++) {
                             const page = await pdf.getPage(i);
                             const textContent = await page.getTextContent();
                             const pageText = textContent.items.map(item => item.str).join(' ');
 
                             if (pageText.trim().length > 100) {
                                 fullText += pageText.trim() + '\n\n';
+                                setOcrProgresso({ pagina: i, total: totalPags, pct: Math.round((i / totalPags) * 100), tipo: 'texto' });
                             } else {
-                                setLogProcessamento(`🔍 ${nome}: OCR na página ${i}/${pdf.numPages}...`);
+                                setOcrProgresso({ pagina: i, total: totalPags, pct: Math.round(((i - 1) / totalPags) * 100), tipo: 'ocr' });
                                 const viewport = page.getViewport({ scale: 2 });
                                 const canvas = document.createElement('canvas');
                                 canvas.width = viewport.width;
@@ -546,26 +560,36 @@ const TriagemIAPage = () => {
                                 const result = await Tesseract.recognize(canvas, 'por', {
                                     logger: (m) => {
                                         if (m.status === 'recognizing text') {
-                                            setLogProcessamento(`🔍 ${nome} OCR pág ${i}: ${Math.round(m.progress * 100)}%`);
+                                            const pctOcr = Math.round(((i - 1) / totalPags + m.progress / totalPags) * 100);
+                                            setOcrProgresso({ pagina: i, total: totalPags, pct: pctOcr, tipo: 'ocr' });
                                         }
                                     }
                                 });
                                 fullText += result.data.text.trim() + '\n\n';
+                                if (result.data.confidence) {
+                                    totalConfianca += result.data.confidence;
+                                    paginasOcr++;
+                                }
                             }
                         }
 
+                        if (paginasOcr > 0) setOcrScore(Math.round(totalConfianca / paginasOcr));
                         conteudo = fullText.trim() || '(Nenhum texto extraído)';
+                        setOcrProgresso({ pagina: totalPags, total: totalPags, pct: 100, tipo: 'pronto' });
                         setLogProcessamento(`✅ ${nome}: ${conteudo.length} caracteres extraídos`);
                     } else {
+                        setOcrProgresso({ pagina: 1, total: 1, pct: 0, tipo: 'imagem' });
                         setLogProcessamento(`🖼️ ${nome}: aplicando OCR...`);
                         const result = await Tesseract.recognize(file, 'por', {
                             logger: (m) => {
                                 if (m.status === 'recognizing text') {
-                                    setLogProcessamento(`🔍 OCR ${nome}: ${Math.round(m.progress * 100)}%`);
+                                    setOcrProgresso({ pagina: 1, total: 1, pct: Math.round(m.progress * 100), tipo: 'imagem' });
                                 }
                             }
                         });
+                        if (result.data.confidence) setOcrScore(Math.round(result.data.confidence));
                         conteudo = result.data.text.trim() || '(Nenhum texto extraído)';
+                        setOcrProgresso({ pagina: 1, total: 1, pct: 100, tipo: 'pronto' });
                         setLogProcessamento(`✅ ${nome}: ${conteudo.length} caracteres extraídos`);
                     }
 
@@ -1393,6 +1417,92 @@ const TriagemIAPage = () => {
         );
     };
 
+    // Carregar histórico de triagens do Supabase
+    const carregarHistorico = async () => {
+        setLoadingHistorico(true);
+        setShowHistorico(true);
+        try {
+            const sb = window._supabaseClient;
+            const userId = (await sb.auth.getSession()).data?.session?.user?.id;
+            if (!userId) { setHistorico([]); return; }
+            const { data, error } = await sb
+                .from('analises_triagem')
+                .select('id, created_at, document_names, modelo_ia, resultado_final')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false })
+                .limit(20);
+            if (error) throw error;
+            setHistorico(data || []);
+        } catch (err) {
+            console.error('Erro ao carregar histórico:', err);
+            setHistorico([]);
+        } finally {
+            setLoadingHistorico(false);
+        }
+    };
+
+    // Restaurar uma triagem do histórico
+    const restaurarTriagem = (item) => {
+        try {
+            const rev = item.resultado_final;
+            if (!rev || !rev.campos_consolidados) {
+                alert('Esta triagem não possui dados consolidados para restaurar.');
+                return;
+            }
+            const parsed = {
+                campos: rev.campos_consolidados.map(c => ({
+                    etapa: c.etapa, campo: c.campo,
+                    informacao: c.informacao, movimento: c.movimento || '-'
+                })),
+                camposMap: Object.fromEntries(rev.campos_consolidados.map(c => [c.campo, c.informacao])),
+                resumo: {
+                    vicios: rev.resumo_executivo?.vicios || [],
+                    mpLocalizado: rev.resumo_executivo?.mp?.localizado,
+                    inconsistencias: rev.resumo_executivo?.inconsistencias || []
+                },
+                observacoes: rev.resumo_executivo?.observacoes || ''
+            };
+            setResultado(parsed);
+            setAnaliseId(item.id);
+            setShowHistorico(false);
+            const evt = new CustomEvent('showToast', { detail: { texto: 'Triagem restaurada com sucesso!', tipo: 'success' } });
+            document.dispatchEvent(evt);
+        } catch (e) {
+            alert('Erro ao restaurar triagem: ' + e.message);
+        }
+    };
+
+    // Exportar Ficha como PDF
+    const exportarFichaPdf = async () => {
+        if (!fichaRef.current || !fichaResumo) return;
+        setExportandoPdf(true);
+        try {
+            const canvas = await html2canvas(fichaRef.current, {
+                scale: 3,
+                backgroundColor: '#ffffff',
+                useCORS: true,
+                logging: false
+            });
+            const imgData = canvas.toDataURL('image/png');
+            const { jsPDF } = window.jspdf || {};
+            if (!jsPDF) { alert('jsPDF não carregado. Verifique sua conexão.'); return; }
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const imgProps = pdf.getImageProperties(imgData);
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            pdf.addImage(imgData, 'PNG', 10, 10, pdfWidth - 20, pdfHeight);
+            const camara = fichaResumo.camara || 'triagem';
+            pdf.save(`Ficha_TJPR_${camara.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+            const evt = new CustomEvent('showToast', { detail: { texto: 'PDF exportado com sucesso!', tipo: 'success' } });
+            document.dispatchEvent(evt);
+        } catch (err) {
+            console.error('Erro ao gerar PDF:', err);
+            alert('Erro ao gerar PDF: ' + err.message);
+        } finally {
+            setExportandoPdf(false);
+        }
+    };
+
     const copiarFichaRichText = async () => {
         if (!fichaResumo) return;
 
@@ -1569,13 +1679,12 @@ OBS: ${fichaResumo.obs || ''}
                 camposMap: { ...prev.camposMap, [nomeCampo]: novoValor }
             };
         });
-
-        // Emite evento de toast para feedback visual premium
+        // Marcar campo como editado (confirmado)
+        setCamposEditados(prev => new Set([...prev, nomeCampo]));
         const toastEvent = new CustomEvent('showToast', {
-            detail: { texto: `Campo "${nomeCampo}" atualizado para "${novoValor}"!`, tipo: 'success' }
+            detail: { texto: `Campo "${nomeCampo}" atualizado!`, tipo: 'success' }
         });
         document.dispatchEvent(toastEvent);
-        console.log(`[Copilot] Campo "${nomeCampo}" atualizado para "${novoValor}"!`);
     };
 
     const carregarRascunhoMinuta = (textoMinuta) => {
@@ -1651,29 +1760,41 @@ OBS: ${fichaResumo.obs || ''}
                             <p className="tjpr-text-dim text-xs font-bold tracking-widest uppercase mt-1">IA - Triagem Baseada no TRIARIO & Assistência Copilot</p>
                         </div>
                     </div>
-                    {resultado && (
+                    <div className="flex items-center gap-2">
                         <button
-                            onClick={() => {
-                                setResultado(null);
-                                setDocumentos([]);
-                                setAgentesResults(null);
-                                setAnaliseId(null);
-                                setChatMessages([]);
-                                setConversaId(null);
-                                setFichaResumo(null);
-                                localStorage.removeItem('tjpr_triagem_resultado');
-                                localStorage.removeItem('tjpr_triagem_textoOcr');
-                                localStorage.removeItem('tjpr_triagem_analiseId');
-                                localStorage.removeItem('tjpr_triagem_conversaId');
-                                localStorage.removeItem('tjpr_triagem_chatMessages');
-                                localStorage.removeItem('tjpr_triagem_fichaResumo');
-                            }}
-                            className="flex items-center gap-2 px-4 py-2 bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 border border-rose-600/20 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+                            onClick={carregarHistorico}
+                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-600/20 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
                         >
-                            <span className="material-symbols-rounded text-sm">refresh</span>
-                            Nova Triagem
+                            <span className="material-symbols-rounded text-sm">history</span>
+                            Histórico
                         </button>
-                    )}
+                        {resultado && (
+                            <button
+                                onClick={() => {
+                                    setResultado(null);
+                                    setDocumentos([]);
+                                    setAgentesResults(null);
+                                    setAnaliseId(null);
+                                    setChatMessages([]);
+                                    setConversaId(null);
+                                    setFichaResumo(null);
+                                    setOcrScore(null);
+                                    setOcrProgresso(null);
+                                    setCamposEditados(new Set());
+                                    localStorage.removeItem('tjpr_triagem_resultado');
+                                    localStorage.removeItem('tjpr_triagem_textoOcr');
+                                    localStorage.removeItem('tjpr_triagem_analiseId');
+                                    localStorage.removeItem('tjpr_triagem_conversaId');
+                                    localStorage.removeItem('tjpr_triagem_chatMessages');
+                                    localStorage.removeItem('tjpr_triagem_fichaResumo');
+                                }}
+                                className="flex items-center gap-2 px-4 py-2 bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 border border-rose-600/20 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+                            >
+                                <span className="material-symbols-rounded text-sm">refresh</span>
+                                Nova Triagem
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Área de Upload (Oculta após o resultado estar pronto para maximizar espaço de trabalho) */}
@@ -1831,8 +1952,33 @@ OBS: ${fichaResumo.obs || ''}
                             </div>
                         </div>
 
-                        {/* Log de Processamento */}
-                        {logProcessamento && (
+                        {/* Barra de Progresso do OCR */}
+                        {ocrProgresso && isProcessing && (
+                            <div className="mt-4 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span className="animate-spin material-symbols-rounded text-indigo-400 text-base">progress_activity</span>
+                                        <p className="text-xs text-indigo-400 font-black uppercase tracking-wider">
+                                            {ocrProgresso.tipo === 'ocr' ? `OCR — Página ${ocrProgresso.pagina} de ${ocrProgresso.total}` :
+                                             ocrProgresso.tipo === 'texto' ? `Extraindo texto — Pág. ${ocrProgresso.pagina}/${ocrProgresso.total}` :
+                                             ocrProgresso.tipo === 'imagem' ? 'Processando imagem com OCR...' :
+                                             ocrProgresso.tipo === 'pronto' ? '✅ OCR Concluído' : logProcessamento}
+                                        </p>
+                                    </div>
+                                    <span className="text-xs font-black text-indigo-300">{ocrProgresso.pct}%</span>
+                                </div>
+                                <div className="w-full bg-indigo-950/60 rounded-full h-2 overflow-hidden">
+                                    <div
+                                        className="h-2 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-300"
+                                        style={{ width: `${ocrProgresso.pct}%` }}
+                                    />
+                                </div>
+                                {logProcessamento && (
+                                    <p className="text-[10px] text-indigo-400/70 font-medium animate-pulse">{logProcessamento}</p>
+                                )}
+                            </div>
+                        )}
+                        {logProcessamento && !ocrProgresso && isProcessing && (
                             <div className="mt-4 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-center">
                                 <p className="text-sm text-indigo-400 animate-pulse font-medium">{logProcessamento}</p>
                             </div>
@@ -1950,7 +2096,28 @@ OBS: ${fichaResumo.obs || ''}
                         
                         {/* Coluna da Esquerda (2/3) - Metadados TRIARIO Extraídos */}
                         <div className="lg:col-span-2 space-y-6">
-                            
+
+                            {/* Badge Score OCR */}
+                            {ocrScore !== null && (
+                                <div className={`flex items-center gap-3 p-3 rounded-2xl border text-xs font-bold ${
+                                    ocrScore >= 80 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' :
+                                    ocrScore >= 50 ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' :
+                                    'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                                }`}>
+                                    <span className="material-symbols-rounded text-base">
+                                        {ocrScore >= 80 ? 'check_circle' : ocrScore >= 50 ? 'warning' : 'error'}
+                                    </span>
+                                    <div>
+                                        <p className="font-black uppercase tracking-wider text-[10px]">Qualidade OCR</p>
+                                        <p className="font-semibold">
+                                            {ocrScore >= 80 ? `Excelente (${ocrScore}% de confiança) — Texto extraído com alta fidelidade.` :
+                                             ocrScore >= 50 ? `Regular (${ocrScore}% de confiança) — Algumas palavras podem estar incorretas.` :
+                                             `Baixa (${ocrScore}% de confiança) — Revise os campos manualmente.`}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Painel de Transparência do OCR em Caso de Sucesso */}
                             {textoOcrExtraido && (
                                 <div className="tjpr-card p-5 border border-white/5 bg-slate-900/40 rounded-2xl space-y-3 animate-in slide-in-from-bottom-2 duration-300">
@@ -1995,9 +2162,17 @@ OBS: ${fichaResumo.obs || ''}
                                         </h3>
                                         <p className="text-[10px] tjpr-text-dim mt-0.5">As 13 etapas da triagem de admissibilidade (etapas de tempestividade tratadas no cálculo de prazos)</p>
                                     </div>
-                                    <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
-                                        13 Etapas Ativas
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        {camposEditados.size > 0 && (
+                                            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/20 flex items-center gap-1">
+                                                <span className="material-symbols-rounded text-[11px]">edit</span>
+                                                {camposEditados.size} editado(s)
+                                            </span>
+                                        )}
+                                        <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                                            13 Etapas Ativas
+                                        </span>
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -2027,14 +2202,24 @@ OBS: ${fichaResumo.obs || ''}
                                                 className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-md shadow-emerald-600/10"
                                             >
                                                 <span className="material-symbols-rounded text-sm">copy_all</span>
-                                                Copiar Ficha (Word)
+                                                Copiar (Word)
+                                            </button>
+                                            <button
+                                                onClick={exportarFichaPdf}
+                                                disabled={exportandoPdf}
+                                                className="flex items-center gap-1 px-3 py-1.5 bg-rose-700 hover:bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50"
+                                            >
+                                                <span className="material-symbols-rounded text-sm">
+                                                    {exportandoPdf ? 'hourglass_empty' : 'picture_as_pdf'}
+                                                </span>
+                                                {exportandoPdf ? 'Gerando...' : 'Exportar PDF'}
                                             </button>
                                             <button
                                                 onClick={copiarFichaTextoPlano}
                                                 className="flex items-center gap-1 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95"
                                             >
                                                 <span className="material-symbols-rounded text-sm">content_copy</span>
-                                                Texto Simples
+                                                Texto
                                             </button>
                                             <button
                                                 onClick={() => {
@@ -2053,7 +2238,7 @@ OBS: ${fichaResumo.obs || ''}
 
                                     {/* Visual da Tabela Clássica do Word com Borda Dupla */}
                                     <div className="flex justify-center p-3 bg-black/35 rounded-2xl border border-white/5 overflow-x-auto">
-                                        <div className="w-full max-w-[460px] min-w-[280px] font-serif text-slate-900 bg-white p-3 rounded-lg shadow-inner">
+                                        <div ref={fichaRef} className="w-full max-w-[460px] min-w-[280px] font-serif text-slate-900 bg-white p-3 rounded-lg shadow-inner">
                                             <table style={{ borderCollapse: 'collapse', width: '100%', fontFamily: '"Times New Roman", Times, serif', fontSize: '13px', border: '3px double #000000', backgroundColor: '#ffffff', color: '#000000' }}>
                                                 <tbody>
                                                     {/* Linha 1: Câmara Cível | Data */}
@@ -2530,6 +2715,70 @@ OBS: ${fichaResumo.obs || ''}
                         </div>
                     );
                 })()}
+
+                {/* Modal de Histórico de Triagens */}
+                {showHistorico && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setShowHistorico(false)}>
+                        <div className="w-full max-w-2xl bg-slate-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center justify-between p-5 border-b border-white/10 bg-indigo-600/5">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-indigo-500/10 text-indigo-400 rounded-xl flex items-center justify-center border border-indigo-500/20">
+                                        <span className="material-symbols-rounded">history</span>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-black tjpr-text-main">Histórico de Triagens</h3>
+                                        <p className="text-[10px] tjpr-text-dim">Últimas 20 análises realizadas nesta conta</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowHistorico(false)} className="p-2 text-slate-400 hover:text-rose-400 hover:bg-white/5 rounded-xl transition-all">
+                                    <span className="material-symbols-rounded">close</span>
+                                </button>
+                            </div>
+                            <div className="p-5 max-h-[60vh] overflow-y-auto custom-scrollbar space-y-3">
+                                {loadingHistorico ? (
+                                    <div className="text-center py-12">
+                                        <div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full mx-auto mb-3"></div>
+                                        <p className="text-sm tjpr-text-dim">Carregando histórico...</p>
+                                    </div>
+                                ) : historico.length === 0 ? (
+                                    <div className="text-center py-12 space-y-3">
+                                        <span className="material-symbols-rounded text-4xl text-slate-600 block">history</span>
+                                        <p className="text-sm tjpr-text-dim font-semibold">Nenhuma triagem salva encontrada.</p>
+                                        <p className="text-xs tjpr-text-dim">As triagens são salvas automaticamente ao analisar documentos.</p>
+                                    </div>
+                                ) : (
+                                    historico.map((item, idx) => {
+                                        const data = new Date(item.created_at).toLocaleString('pt-BR');
+                                        const nomes = Array.isArray(item.document_names) ? item.document_names.join(', ') : (item.document_names || 'Sem nome');
+                                        const temResultado = item.resultado_final?.campos_consolidados?.length > 0;
+                                        return (
+                                            <div key={item.id || idx} className="flex items-start justify-between gap-3 p-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl transition-all">
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-black tjpr-text-main truncate">{nomes}</p>
+                                                    <p className="text-[10px] tjpr-text-dim mt-0.5">{data} · {item.modelo_ia || 'Modelo padrão'}</p>
+                                                    {temResultado && (
+                                                        <p className="text-[9px] text-emerald-400 mt-1 flex items-center gap-1">
+                                                            <span className="material-symbols-rounded text-[10px]">check_circle</span>
+                                                            {item.resultado_final.campos_consolidados.length} campos extraídos
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    onClick={() => restaurarTriagem(item)}
+                                                    disabled={!temResultado}
+                                                    className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                                                >
+                                                    <span className="material-symbols-rounded text-sm">restore</span>
+                                                    Restaurar
+                                                </button>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Footer Informativo */}
                 <div className="text-center p-4 tjpr-bg-alt/30 rounded-2xl border border-white/5">

@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Módulo Prazos - P-SEP-AR - TJPR</title>
+    <meta name="description" content="Módulo de cálculo de prazos processuais, triagem IA e minutário do TJPR - P-SEP-AR">
     <meta name="color-scheme" content="light dark">
     <link rel="icon" href="Logo.png">
     <link rel="manifest" href="manifest.json">
@@ -30,7 +31,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=17">
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -56,29 +57,31 @@
             }
         }
     </script>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+    <!-- React 18 — Modo Produção -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <!-- React Image Crop -->
     <link rel="stylesheet" href="https://unpkg.com/react-image-crop/dist/ReactCrop.css" />
     <script src="https://unpkg.com/react-image-crop/dist/ReactCrop.umd.js"></script>
 
-    <!-- SDK do Supabase (substitui Firebase) -->
+    <!-- SDK do Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <!-- Chart.js e SheetJS (para gráficos e Excel) -->
+    <!-- Chart.js e SheetJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/react-chartjs-2@2.11.2/dist/react-chartjs-2.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-    <!-- Biblioteca para gerar DOCX -->
-    <!-- Bibliotecas de geração de DOCX removidas para usar abordagem de HTML para DOC -->
-    <!-- Biblioteca para salvar arquivos (alternativa robusta para download) -->
+    <!-- html2canvas para exportação PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <!-- jsPDF para exportação PDF da Ficha -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <!-- OCR Libraries for TriagemIA -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -100,31 +103,29 @@
     -->
     <div id="root"></div>
 
-    <!-- O Babel irá transpilar este arquivo .js externo -->
     <!-- Supabase: init -->
-    <script src="supabase-init.js?v=16"></script>
-    <script src="contexts.js?v=16" type="text/babel"></script>
-    <script src="utils.js?v=16" type="text/babel"></script>
-    <script src="regrasCNJ.js?v=16" type="text/babel"></script>
-    <script src="regrasCrime.js?v=16" type="text/babel"></script>
-    <script src="regrasCivel.js?v=16" type="text/babel"></script>
-    <script src="minutas-default.js?v=16" type="text/babel"></script> <!-- Carrega os modelos padrão -->
-    <script src="MinutaPreparoAdminPage.js?v=1" type="text/babel"></script> <!-- Editor visual da árvore de preparo -->
-    <script src="MinutasAdminPage.js?v=16" type="text/babel"></script> <!-- Carrega o componente da página -->
-    <script src="MinutaPreparoFlow.js?v=16" type="text/babel"></script>
-    <script src="MinutaPreparoPage.js?v=16" type="text/babel"></script>
-    <script src="CalendarAdminPage.js?v=16" type="text/babel"></script>
-    <!-- Os arquivos de Estatísticas e Usuários serão criados a seguir -->
-    <script src="BugReportsPage.js?v=16" type="text/babel"></script>
-    <script src="AgentStudioAdminPage.js?v=1" type="text/babel"></script>
-    <script src="TriagemIAPage.js?v=5" type="text/babel"></script>
-    <script src="MinutarioPage.js?v=1" type="text/babel"></script>
+    <script src="supabase-init.js?v=17"></script>
+    <script src="contexts.js?v=17" type="text/babel"></script>
+    <script src="utils.js?v=17" type="text/babel"></script>
+    <script src="regrasCNJ.js?v=17" type="text/babel"></script>
+    <script src="regrasCrime.js?v=17" type="text/babel"></script>
+    <script src="regrasCivel.js?v=17" type="text/babel"></script>
+    <script src="minutas-default.js?v=17" type="text/babel"></script>
+    <script src="MinutaPreparoAdminPage.js?v=17" type="text/babel"></script>
+    <script src="MinutasAdminPage.js?v=17" type="text/babel"></script>
+    <script src="MinutaPreparoFlow.js?v=17" type="text/babel"></script>
+    <script src="MinutaPreparoPage.js?v=17" type="text/babel"></script>
+    <script src="CalendarAdminPage.js?v=17" type="text/babel"></script>
+    <script src="BugReportsPage.js?v=17" type="text/babel"></script>
+    <script src="AgentStudioAdminPage.js?v=17" type="text/babel"></script>
+    <script src="TriagemIAPage.js?v=17" type="text/babel"></script>
+    <script src="MinutarioPage.js?v=17" type="text/babel"></script>
 
     <!-- Componentes do Design System TJPR -->
-    <script src="components.js?v=16" type="text/babel"></script>
-    <script src="login.js?v=16" type="text/babel"></script>
+    <script src="components.js?v=17" type="text/babel"></script>
+    <script src="login.js?v=17" type="text/babel"></script>
 
-    <script src="app.js?v=16" type="text/babel"></script>
+    <script src="app.js?v=17" type="text/babel"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

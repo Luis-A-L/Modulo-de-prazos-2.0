@@ -41,3 +41,13 @@ Minutario-Portable-latest.exe
 # OS
 .DS_Store
 Thumbs.db
+
+# Arquivos temporarios de desenvolvimento
+temp_*.js
+temp_*.html
+debug_*.js
+verify_*.js
+create_preview.js
+check_keys.py
+server.log
+out.json
